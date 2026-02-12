@@ -1,7 +1,7 @@
 import Mathlib.Data.Multiset.Basic
 import Mathlib.Data.ZMod.Basic
 import Mathlib.Tactic
-import TernaryScaleTheorems.Basic
+import ScaleWordTheorems.Basic
 
 /-!
 # MOS (Moment of Symmetry) Scales

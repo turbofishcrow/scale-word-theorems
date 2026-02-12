@@ -1,5 +1,0 @@
-import TernaryScaleTheorems.Basic
-import TernaryScaleTheorems.MOS
-import TernaryScaleTheorems.MOSBresenham
-import TernaryScaleTheorems.MOSSubstitution
-import TernaryScaleTheorems.MV3

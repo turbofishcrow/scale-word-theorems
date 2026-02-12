@@ -1,4 +1,4 @@
-# Ternary Scale Theorems
+# Scale Word Theorems in Lean 4
 
 Formal proofs in Lean 4 about MOS (Moment of Symmetry) scales and MV3 (Maximum Variety 3) ternary scales. Built on Mathlib.
 
@@ -17,7 +17,7 @@ The generator theorem is proved by strong induction on `n`. The base cases are `
 
 ## File Structure
 
-### [Basic.lean](TernaryScaleTheorems/Basic.lean) (243 lines)
+### [Basic.lean](ScaleWordTheorems/Basic.lean) (243 lines)
 
 Core definitions for the formalization:
 
@@ -29,7 +29,7 @@ Core definitions for the formalization:
 - **`StepSize`** — Ternary alphabet (`L`, `m`, `s`)
 - **`TernaryNecklace`** — Circular words over three step sizes
 
-### [MOS.lean](TernaryScaleTheorems/MOS.lean) (9663 lines)
+### [MOS.lean](ScaleWordTheorems/MOS.lean) (9663 lines)
 
 The main file containing all definitions, lemmas, and theorems about MOS scales:
 
@@ -44,7 +44,7 @@ The main file containing all definitions, lemmas, and theorems about MOS scales:
 - **Non-primitive case** (`hasGenerator_of_nonprimitive_mos`): Handles words that are `d`-fold repetitions via `mos_repetition_of_gcd_bjorklund`
 - **Main theorems**: `allMOSScalesAreBalanced`, `allMOSScalesHaveGenerator`
 
-### [PairIdentificationAndDeletion.lean](TernaryScaleTheorems/PairIdentificationAndDeletion.lean) (84 lines)
+### [PairIdentificationAndDeletion.lean](ScaleWordTheorems/PairIdentificationAndDeletion.lean) (84 lines)
 
 Definitions for ternary scale operations:
 
@@ -52,7 +52,7 @@ Definitions for ternary scale operations:
 - **Deletion-MOS**: A ternary necklace is deletion-MOS if deleting any step size and reading circularly yields a MOS
 - **MOS substitution**: A ternary necklace is a MOS substitution necklace if it admits both a template MOS (via identification) and a filling MOS (via deletion)
 
-### [TwistedNecklaces.lean](TernaryScaleTheorems/TwistedNecklaces.lean) (3 lines)
+### [TwistedNecklaces.lean](ScaleWordTheorems/TwistedNecklaces.lean) (3 lines)
 
 Stub file importing `Basic` and `MOS`.
 
