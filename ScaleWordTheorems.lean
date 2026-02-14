@@ -1,5 +1,6 @@
 import ScaleWordTheorems.Basic
 import ScaleWordTheorems.MOS
-import ScaleWordTheorems.MOSBresenham
-import ScaleWordTheorems.MOSSubstitution
+import ScaleWordTheorems.Permutation
 import ScaleWordTheorems.MV3
+import ScaleWordTheorems.PairIdentificationAndDeletion
+import ScaleWordTheorems.TwistedNecklaces

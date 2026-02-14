@@ -4,7 +4,7 @@ Formal proofs in Lean 4 about MOS (Moment of Symmetry) scales and MV3 (Maximum V
 
 The long-term goal is to formalize the **MV3 classification theorem**: a primitive ternary scale with at most 3 distinct `k`-step vectors for every `k` is either balanced, the sporadic word `XYZYX`, or a twisted scale. The MOS theory proved here is a key prerequisite, since balanced MV3 scales decompose into MOS patterns via pair identification and step deletion.
 
-(Inthar's note: Yes, the work so far is AI-generated. I double-checked the major theorems' signatures to ensure that the right things were being proven. I'll do the ternary part by myself if I ever find the energy to.)
+(Inthar's note: Yes, the work so far is AI-generated. I double-checked the major theorems' signatures to ensure that the right things were being proven.)
 
 ## Completed Results
 

@@ -1,0 +1,58 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["c248b9e72e7ac3b2.olean"],
+  "i": "90a0ca82d2de2c46.ilean",
+  "c": "d1a0403baeb4db32.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/home/inthar/scale-word-theorems/.lake/packages/Cli/.lake/build/lib/lean:/home/inthar/scale-word-theorems/.lake/packages/batteries/.lake/build/lib/lean:/home/inthar/scale-word-theorems/.lake/packages/Qq/.lake/build/lib/lean:/home/inthar/scale-word-theorems/.lake/packages/aesop/.lake/build/lib/lean:/home/inthar/scale-word-theorems/.lake/packages/proofwidgets/.lake/build/lib/lean:/home/inthar/scale-word-theorems/.lake/packages/importGraph/.lake/build/lib/lean:/home/inthar/scale-word-theorems/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/home/inthar/scale-word-theorems/.lake/packages/plausible/.lake/build/lib/lean:/home/inthar/scale-word-theorems/.lake/packages/mathlib/.lake/build/lib/lean:/home/inthar/scale-word-theorems/.lake/build/lib/lean /home/inthar/.elan/toolchains/leanprover--lean4---v4.27.0-rc1/bin/lean /home/inthar/scale-word-theorems/ScaleWordTheorems/MOSBresenham.lean -o /home/inthar/scale-word-theorems/.lake/build/lib/lean/ScaleWordTheorems/MOSBresenham.olean -i /home/inthar/scale-word-theorems/.lake/build/lib/lean/ScaleWordTheorems/MOSBresenham.ilean -c /home/inthar/scale-word-theorems/.lake/build/ir/ScaleWordTheorems/MOSBresenham.c --setup /home/inthar/scale-word-theorems/.lake/build/ir/ScaleWordTheorems/MOSBresenham.setup.json --json",
+   "level": "trace"},
+  {"message":
+   "ScaleWordTheorems/MOSBresenham.lean:50:6: declaration uses 'sorry'",
+   "level": "warning"},
+  {"message":
+   "ScaleWordTheorems/MOSBresenham.lean:70:49: unused variable `hn`\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "ScaleWordTheorems/MOSBresenham.lean:158:5: unused variable `hd`\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "ScaleWordTheorems/MOSBresenham.lean:158:18: unused variable `hd_pos`\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`",
+   "level": "warning"},
+  {"message":
+   "ScaleWordTheorems/MOSBresenham.lean:195:6: declaration uses 'sorry'",
+   "level": "warning"},
+  {"message":
+   "ScaleWordTheorems/MOSBresenham.lean:338:6: declaration uses 'sorry'",
+   "level": "warning"},
+  {"message":
+   "ScaleWordTheorems/MOSBresenham.lean:362:8: declaration uses 'sorry'",
+   "level": "warning"}],
+ "inputs":
+ [["ScaleWordTheorems.MOSBresenham:deps",
+   [["deps",
+     [["ScaleWordTheorems/ScaleWordTheorems:extraDep",
+       [["@ScaleWordTheorems:extraDep", "00000000000006bb"]]],
+      ["imports",
+       [["Mathlib.Data.Multiset.Basic transitive imports (legacy)",
+         "0ebb7b52374773c4"],
+        ["Mathlib.Data.Multiset.Basic:importAllArts", "bc794c777aa31b39"],
+        ["Mathlib.Data.ZMod.Basic transitive imports (legacy)",
+         "904b776d5b598f4c"],
+        ["Mathlib.Data.ZMod.Basic:importAllArts", "40a0a0709f6c4bff"],
+        ["ScaleWordTheorems.MOS transitive imports (legacy)",
+         "000e639fd25ab08f"],
+        ["ScaleWordTheorems.MOS:importAllArts", "48e582c225191050"]]]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.27.0, commit 2fcce7258eeb6e324366bc25f9058293b04b7547",
+   "6f43b597efea5d4c"],
+  ["/home/inthar/scale-word-theorems/ScaleWordTheorems/MOSBresenham.lean",
+   "9405f855353807ad"],
+  ["options", [["-Dpp.unicode.fun=true", "9b94070140457fab"]]],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "c773416553ff4dc8"}
