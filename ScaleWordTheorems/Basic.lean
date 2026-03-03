@@ -17,10 +17,6 @@ which are necklaces (circular words) over an alphabet of three step sizes.
 * `TernaryNecklace`: A circular word over three step sizes (typically L, M, s)
 * Projections and other basic operations on scale words
 
-## References
-
-Based on "ternary-scale-theorems" document
-
 -/
 
 
@@ -150,8 +146,8 @@ def allKStepVectors [NeZero n] [DecidableEq α] (w : Necklace α n) (k : ℕ) : 
   List.map (fun i => kStepVector w i k) (List.range n)
 
 /-- Convert a list into a necklace -/
-def toNecklace [Inhabited α] [DecidableEq α] (l : List α) : Necklace α (l.length) :=
-  fun (i : ZMod l.length) => l[i.val]!
+def toNecklace [DecidableEq α] (l : List α) [NeZero l.length] : Necklace α (l.length) :=
+  fun (i : ZMod l.length) => l[i.val]'(ZMod.val_lt i)
 
 /-- Whether a necklace is balanced:
 Let *a* be a letter in a word or necklace *s*. Define

@@ -21,7 +21,7 @@
         ["Mathlib.Tactic:importAllArts", "396d263b6f422b32"],
         ["ScaleWordTheorems.Basic transitive imports (legacy)",
          "6135f90b4dcb48bc"],
-        ["ScaleWordTheorems.Basic:importAllArts", "42e10917dcfb5ee2"]]]]],
+        ["ScaleWordTheorems.Basic:importAllArts", "6dd2f604299d527f"]]]]],
     ["libs",
      [["import dynlibs", "00000000000006bb"],
       ["package external libraries", "00000000000006bb"],
@@ -33,4 +33,4 @@
    "a7d531e6199d286a"],
   ["options", [["-Dpp.unicode.fun=true", "9b94070140457fab"]]],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "f992b19019927404"}
+ "depHash": "db041b941a47a42d"}

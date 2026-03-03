@@ -1,6 +1,6 @@
 // Lean compiler output
 // Module: ScaleWordTheorems.MV3
-// Imports: public import Init public import ScaleWordTheorems.Basic public import ScaleWordTheorems.MOS public import ScaleWordTheorems.Permutation public import ScaleWordTheorems.PairIdentificationAndDeletion public import ScaleWordTheorems.TwistedNecklaces
+// Imports: public import Init public import ScaleWordTheorems.MV3Defs public import ScaleWordTheorems.MV3AS public import ScaleWordTheorems.MV3OddRegular public import ScaleWordTheorems.MV3EvenRegular public import ScaleWordTheorems.MV3Balance public import ScaleWordTheorems.MV3Classification
 #include <lean/lean.h>
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wunused-parameter"
@@ -14,11 +14,12 @@
 extern "C" {
 #endif
 lean_object* initialize_Init(uint8_t builtin);
-lean_object* initialize_ScaleWordTheorems_ScaleWordTheorems_Basic(uint8_t builtin);
-lean_object* initialize_ScaleWordTheorems_ScaleWordTheorems_MOS(uint8_t builtin);
-lean_object* initialize_ScaleWordTheorems_ScaleWordTheorems_Permutation(uint8_t builtin);
-lean_object* initialize_ScaleWordTheorems_ScaleWordTheorems_PairIdentificationAndDeletion(uint8_t builtin);
-lean_object* initialize_ScaleWordTheorems_ScaleWordTheorems_TwistedNecklaces(uint8_t builtin);
+lean_object* initialize_ScaleWordTheorems_ScaleWordTheorems_MV3Defs(uint8_t builtin);
+lean_object* initialize_ScaleWordTheorems_ScaleWordTheorems_MV3AS(uint8_t builtin);
+lean_object* initialize_ScaleWordTheorems_ScaleWordTheorems_MV3OddRegular(uint8_t builtin);
+lean_object* initialize_ScaleWordTheorems_ScaleWordTheorems_MV3EvenRegular(uint8_t builtin);
+lean_object* initialize_ScaleWordTheorems_ScaleWordTheorems_MV3Balance(uint8_t builtin);
+lean_object* initialize_ScaleWordTheorems_ScaleWordTheorems_MV3Classification(uint8_t builtin);
 static bool _G_initialized = false;
 LEAN_EXPORT lean_object* initialize_ScaleWordTheorems_ScaleWordTheorems_MV3(uint8_t builtin) {
 lean_object * res;
@@ -27,19 +28,22 @@ _G_initialized = true;
 res = initialize_Init(builtin);
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
-res = initialize_ScaleWordTheorems_ScaleWordTheorems_Basic(builtin);
+res = initialize_ScaleWordTheorems_ScaleWordTheorems_MV3Defs(builtin);
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
-res = initialize_ScaleWordTheorems_ScaleWordTheorems_MOS(builtin);
+res = initialize_ScaleWordTheorems_ScaleWordTheorems_MV3AS(builtin);
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
-res = initialize_ScaleWordTheorems_ScaleWordTheorems_Permutation(builtin);
+res = initialize_ScaleWordTheorems_ScaleWordTheorems_MV3OddRegular(builtin);
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
-res = initialize_ScaleWordTheorems_ScaleWordTheorems_PairIdentificationAndDeletion(builtin);
+res = initialize_ScaleWordTheorems_ScaleWordTheorems_MV3EvenRegular(builtin);
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
-res = initialize_ScaleWordTheorems_ScaleWordTheorems_TwistedNecklaces(builtin);
+res = initialize_ScaleWordTheorems_ScaleWordTheorems_MV3Balance(builtin);
+if (lean_io_result_is_error(res)) return res;
+lean_dec_ref(res);
+res = initialize_ScaleWordTheorems_ScaleWordTheorems_MV3Classification(builtin);
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
 return lean_io_result_mk_ok(lean_box(0));

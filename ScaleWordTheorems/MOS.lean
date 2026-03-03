@@ -227,7 +227,7 @@ def isGenerator [NeZero n] (w : BinaryNecklace n) (g : ZVector BinaryStep) : Boo
   isPeriodReduced && hasGoodRotation
 
 /-- A scale has a generator if there exists some vector g that is a generator -/
-def HasGenerator [NeZero n] [DecidableEq α] (w : Necklace α n) : Prop :=
+def hasGenerator [NeZero n] [DecidableEq α] (w : Necklace α n) : Prop :=
   ∃ g : ZVector α, IsGenerator w g
 
 /-- Count how many positions (out of all n) have a given k-step vector -/
@@ -873,7 +873,7 @@ private lemma list_filter_beq_length_eq_map_ite_sum {α : Type*} [DecidableEq α
     · simp [show (hd == a) = false from beq_eq_false_iff_ne.mpr h, h, ih]
 
 /-- Convert `(List.range n |>.map f).sum` to `∑ i ∈ Finset.range n, f i`. -/
-private lemma list_range_map_sum_eq_finset {M : Type*} [AddCommMonoid M]
+lemma list_range_map_sum_eq_finset {M : Type*} [AddCommMonoid M]
     (f : ℕ → M) (m : ℕ) :
     ((List.range m).map f).sum = ∑ i ∈ Finset.range m, f i := by
   induction m with
@@ -1420,16 +1420,16 @@ lemma mos_kStepVector_L_count_diff_le_one [NeZero n] (w : BinaryNecklace n)
   -- Contradiction: 3 ≤ card ≤ 2
   omega
 
-/-- In a MOS where the k-step has exactly 2 varieties with counts (p-1, 1),
+/-- In a binary scale where the k-step has exactly 2 varieties with counts (p-1, 1),
     we have gcd(k, p) = 1. -/
 lemma p_minus_one_occurrences_implies_coprime_to_period [NeZero n]
-    (w : BinaryNecklace n) (hw : BinaryNecklace.isMOS w)
+    (w : BinaryNecklace n) (hw : BinaryNecklace.isBinary w)
     (k : ℕ) (hk_pos : 0 < k) (hk_bound : k < (Necklace.period w).length)
     (g : ZVector BinaryStep)
     (hcount : countKStepVectorPerPeriod w k g = (Necklace.period w).length - 1) :
     Nat.Coprime k (Necklace.period w).length := by
   let pLen := (Necklace.period w).length
-  have hpLen_ge_2 : pLen ≥ 2 := period_length_ge_two_of_binary w hw.1
+  have hpLen_ge_2 : pLen ≥ 2 := period_length_ge_two_of_binary w hw
   have hk_lt_n : k < n := lt_of_lt_of_le hk_bound (Necklace.period_length_le_n w)
 
   -- Step 1: Find a position i₀ where Necklace.kStepVector = g (count ≥ 1 since pLen ≥ 2)
@@ -1525,7 +1525,20 @@ lemma p_minus_one_occurrences_implies_coprime_to_period [NeZero n]
     linarith
 
   -- Step 6: |g(L) - g'(L)| = 1
-  have hdiff_le := mos_kStepVector_L_count_diff_le_one w hw k hk_pos hk_lt_n g g' hg_mem hg'_mem
+  -- prove this for k-steps without using isMOS
+  have hdiff_le : g BinaryStep.L - 1 ≤ g' BinaryStep.L ∧ g' BinaryStep.L ≤ g BinaryStep.L + 1 := by
+    rcases Nat.eq_zero_or_pos j₀ with rfl | hj₀_pos
+    · -- j₀ = 0: scoot from 0 to 1, where position 1 has vector g
+      have hscoot := kStepVector_scoot_L_count_diff w 0 k
+      simp only at hscoot
+      rw [huniq 1 (Finset.mem_range.mpr (by omega)) (by omega)] at hscoot
+      constructor <;> linarith [hscoot.1, hscoot.2]
+    · -- j₀ ≥ 1: scoot from j₀-1 to j₀, where position j₀-1 has vector g
+      have hscoot := kStepVector_scoot_L_count_diff w (j₀ - 1) k
+      simp only at hscoot
+      rw [Nat.sub_add_cancel hj₀_pos,
+          huniq (j₀ - 1) (Finset.mem_range.mpr (by omega)) (by omega)] at hscoot
+      exact hscoot
   have hg_ne_g' : g ≠ g' := Ne.symm hj₀_ne
   have hg_total : (g BinaryStep.L : ℤ) + g BinaryStep.s = k := by
     rw [← hi₀_eq]; exact_mod_cast kStepVector_total_count w i₀ k
@@ -1572,13 +1585,13 @@ lemma p_minus_one_occurrences_implies_coprime_to_period [NeZero n]
   · have : (Nat.gcd k pLen : ℤ) ∣ 1 := by rwa [Int.dvd_neg] at h
     exact Nat.le_antisymm (by exact_mod_cast Int.le_of_dvd one_pos this) hgcd_pos
 
-/-- If g is a generator of a MOS scale, then the step size k from IsGenerator
+/-- If g is a generator of a binary scale, then the step size k from IsGenerator
     is coprime to the period length.
 
     Proof: From the prefix bijection, prefix(1) = j₁·g + c₁·p, giving the
     total-count equation j₁·k + c₁·pLen = 1 (a Bézout identity). -/
 lemma generator_implies_coprime_to_period [NeZero n]
-    (w : BinaryNecklace n) (_hw : BinaryNecklace.isMOS w)
+    (w : BinaryNecklace n) (hw : BinaryNecklace.isBinary w)
     (g : ZVector BinaryStep) (hg : IsGenerator w g) :
     let per := Necklace.period w
     let pLen := per.length
@@ -1588,7 +1601,7 @@ lemma generator_implies_coprime_to_period [NeZero n]
   let pLen := per.length
   let pVec := ZVector.ofList per
   let w' := fun i => w (i + r)
-  have hpLen_ge_2 : pLen ≥ 2 := period_length_ge_two_of_binary w _hw.1
+  have hpLen_ge_2 : pLen ≥ 2 := period_length_ge_two_of_binary w hw
   have hpLen_pos : 0 < pLen := by omega
   -- From prefix(1) = j₁·g + c₁·p, extract j₁ and c₁
   obtain ⟨j₁, c₁, hpfx1⟩ := hprefix_fwd ⟨0, hpLen_pos⟩
@@ -1728,6 +1741,1091 @@ lemma Necklace.period_length_le_of_translational_period {n : ℕ} [NeZero n]
   obtain ⟨i, hi, hk_val⟩ := List.mem_range'.mp hk_mem
   omega
 
+/-- ofList distributes over list append -/
+private lemma ZVector_ofList_append [DecidableEq α] (l₁ l₂ : List α) (a : α) :
+    ZVector.ofList (l₁ ++ l₂) a = ZVector.ofList l₁ a + ZVector.ofList l₂ a := by
+  simp only [ZVector.ofList, List.filter_append, List.length_append, Nat.cast_add]
+
+/-- ofList of cons distributes as singleton + tail -/
+private lemma ZVector_ofList_cons [DecidableEq α] (x : α) (l : List α) (a : α) :
+    ZVector.ofList (x :: l) a = ZVector.ofList [x] a + ZVector.ofList l a := by
+  rw [show x :: l = [x] ++ l from rfl, ZVector_ofList_append]
+
+/-- The period of a necklace equals the slice from 0 to the period length -/
+lemma period_eq_slice_zero [NeZero n] [DecidableEq α] (w : Necklace α n) :
+    Necklace.period w = Necklace.slice w 0 (Necklace.period w).length := by
+  have ⟨l, hl⟩ : ∃ l, Necklace.period w = Necklace.slice w 0 l := by
+    unfold Necklace.period
+    cases hfind : ((List.range n).tail.map (Necklace.slice w 0)).find?
+        (Necklace.isRepetitionOf w) with
+    | some pfx =>
+      simp only [Option.getD_some]
+      have hmem := List.mem_of_find?_eq_some hfind
+      rw [List.mem_map] at hmem
+      obtain ⟨l, _, rfl⟩ := hmem
+      exact ⟨l, rfl⟩
+    | none =>
+      simp only [Option.getD_none]
+      exact ⟨n, rfl⟩
+  have hlen : (Necklace.period w).length = l := by
+    rw [hl, Necklace.slice_length]; omega
+  rw [hlen]; exact hl
+
+/-- Period length is positive -/
+lemma period_length_pos [NeZero n] [DecidableEq α] (w : Necklace α n) :
+    0 < (Necklace.period w).length := by
+  unfold Necklace.period
+  cases hfind : ((List.range n).tail.map (Necklace.slice w 0)).find?
+      (Necklace.isRepetitionOf w) with
+  | none =>
+    simp only [Option.getD_none]
+    rw [Necklace.slice_length]
+    exact NeZero.pos n
+  | some pfx =>
+    simp only [Option.getD_some]
+    have hmem := List.mem_of_find?_eq_some hfind
+    rw [List.mem_map] at hmem
+    obtain ⟨k', hk_mem, hk_eq⟩ := hmem
+    rw [← hk_eq, Necklace.slice_length]
+    simp only [List.tail_range, List.mem_range'] at hk_mem
+    omega
+
+/-- Letter count over any full-period-length segment equals the period vector.
+    This follows from pointwise periodicity: w(j) = w(j + pLen), so
+    "scooting" a window of length pLen doesn't change the letter counts. -/
+lemma kStepVector_full_period [NeZero n] [DecidableEq α] (w : Necklace α n)
+    (m : ℕ) (a : α) :
+    Necklace.kStepVector w m (Necklace.period w).length a =
+    (ZVector.ofList (Necklace.period w)) a := by
+  set pLen := (Necklace.period w).length with hpLen_def
+  have hpLen_pos : 0 < pLen := period_length_pos w
+
+  -- Pointwise periodicity: w(j) = w(j % pLen) for all j
+  -- (copied from the proven pattern inside kStepVector_mod_period)
+  have hpLen_dvd_n : pLen ∣ n := by
+    have hRep : Necklace.isRepetitionOf w (Necklace.period w) = true := by
+      unfold Necklace.period
+      cases hfind : ((List.range n).tail.map (Necklace.slice w 0)).find?
+          (Necklace.isRepetitionOf w) with
+      | some pfx => simp only [Option.getD_some]; exact List.find?_some hfind
+      | none =>
+        simp only [Option.getD_none]
+        unfold Necklace.isRepetitionOf
+        simp only [Necklace.slice_length, Nat.sub_zero, ne_eq,
+          Nat.pos_iff_ne_zero.mp (NeZero.pos n), ↓reduceIte,
+          Nat.mod_self, not_true_eq_false]
+        rw [List.all_eq_true]
+        intro i hi
+        rw [List.mem_range] at hi
+        rw [decide_eq_true_eq, Nat.mod_eq_of_lt hi]
+        unfold Necklace.slice
+        simp only [bind_pure_comp, Functor.map, Nat.sub_zero, Nat.cast_zero, zero_add,
+              List.map_map, Function.comp, List.getElem?_map, List.getElem?_range hi,
+              Option.map]
+    unfold Necklace.isRepetitionOf at hRep
+    simp only [ne_eq] at hRep
+    split at hRep
+    · exact absurd hRep Bool.false_ne_true
+    · split at hRep
+      · exact absurd hRep Bool.false_ne_true
+      · rename_i _ h2
+        push_neg at h2
+        exact Nat.dvd_of_mod_eq_zero h2
+
+  have hperiodic : ∀ j : ℕ, w ((j : ℕ) : ZMod n) = w ((j % pLen : ℕ) : ZMod n) := by
+    intro j
+    have hj_mod_n := Nat.mod_lt j (NeZero.pos n)
+    have hj_mod_pLen := Nat.mod_lt j hpLen_pos
+    conv_lhs => rw [show ((j : ℕ) : ZMod n) = ((j % n : ℕ) : ZMod n) from by simp []]
+    have hRep : Necklace.isRepetitionOf w (Necklace.period w) = true := by
+      unfold Necklace.period
+      cases hfind : ((List.range n).tail.map (Necklace.slice w 0)).find?
+          (Necklace.isRepetitionOf w) with
+      | some pfx => simp only [Option.getD_some]; exact List.find?_some hfind
+      | none =>
+        simp only [Option.getD_none]
+        unfold Necklace.isRepetitionOf
+        simp only [Necklace.slice_length, Nat.sub_zero, ne_eq,
+          Nat.pos_iff_ne_zero.mp (NeZero.pos n), ↓reduceIte,
+          Nat.mod_self, not_true_eq_false]
+        rw [List.all_eq_true]
+        intro i hi
+        rw [List.mem_range] at hi
+        rw [decide_eq_true_eq, Nat.mod_eq_of_lt hi]
+        unfold Necklace.slice
+        simp only [bind_pure_comp, Functor.map, Nat.sub_zero, Nat.cast_zero, zero_add,
+              List.map_map, Function.comp, List.getElem?_map, List.getElem?_range hi,
+              Option.map]
+    have hperiod_match : ∀ i, i < n →
+        some (w ((i : ℕ) : ZMod n)) = (Necklace.period w)[i % pLen]? := by
+      intro i hi
+      unfold Necklace.isRepetitionOf at hRep
+      simp only [ne_eq] at hRep
+      split at hRep
+      · exact absurd hRep Bool.false_ne_true
+      · split at hRep
+        · exact absurd hRep Bool.false_ne_true
+        · rw [List.all_eq_true] at hRep
+          have := hRep i (List.mem_range.mpr hi)
+          rwa [decide_eq_true_eq] at this
+    have hperiod_is_slice : Necklace.period w = Necklace.slice w 0 pLen :=
+      period_eq_slice_zero w
+    have hperiod_elem : ∀ j, j < pLen →
+        (Necklace.period w)[j]? = some (w ((j : ℕ) : ZMod n)) := by
+      intro j hj
+      rw [hperiod_is_slice]
+      unfold Necklace.slice
+      simp only [bind_pure_comp, Functor.map, Nat.sub_zero, Nat.cast_zero, zero_add,
+            List.map_map, Function.comp, List.getElem?_map, List.getElem?_range hj,
+            Option.map]
+    have h1 := hperiod_match (j % n) hj_mod_n
+    rw [Nat.mod_mod_of_dvd j hpLen_dvd_n] at h1
+    have h2 := hperiod_elem (j % pLen) hj_mod_pLen
+    rw [h2] at h1
+    exact Option.some_injective _ h1
+
+  -- From hperiodic: w(j) = w(j + pLen) for all j
+  have hperiodic_shift : ∀ j : ℕ,
+      w ((j : ℕ) : ZMod n) = w (((j + pLen) : ℕ) : ZMod n) := by
+    intro j
+    rw [hperiodic j, hperiodic (j + pLen), Nat.add_mod_right]
+
+  -- Scoot: Necklace.kStepVector w m' pLen a = Necklace.kStepVector w (m'+1) pLen a
+  -- Removing the first element and adding the last doesn't change the count
+  -- because w(m') = w(m' + pLen) by periodicity.
+  have scoot : ∀ m', Necklace.kStepVector w m' pLen a = Necklace.kStepVector w (m' + 1) pLen a := by
+    intro m'
+    unfold Necklace.kStepVector
+    have h_lhs := slice_shift_decompose w m' pLen hpLen_pos
+    have h_rhs := slice_extend_end w (m' + 1) (pLen - 1)
+    rw [show (m' + 1) + (pLen - 1) + 1 = m' + 1 + pLen from by omega] at h_rhs
+    -- h_rhs may have ↑(m'+1) + ↑(pLen-1) in the ZMod cast for the last element;
+    -- we need to also normalize the slice bound
+    conv at h_rhs => rhs; rw [show (m' + 1) + (pLen - 1) = m' + pLen from by omega]
+    rw [h_lhs, h_rhs, ZVector_ofList_cons, ZVector_ofList_append, hperiodic_shift m']
+    -- The last element on RHS may still have the split cast ↑(m'+1) + ↑(pLen-1);
+    -- unify with ↑(m'+pLen) using Nat.cast_add
+    have hcast : (↑(m' + pLen) : ZMod n) = ↑(m' + 1) + ↑(pLen - 1) := by
+      rw [← Nat.cast_add]; congr 1; omega
+    rw [hcast]; ring
+
+  -- By induction: Necklace.kStepVector w m pLen a = Necklace.kStepVector w 0 pLen a
+  have h_eq_zero : Necklace.kStepVector w m pLen a = Necklace.kStepVector w 0 pLen a := by
+    induction m with
+    | zero => rfl
+    | succ m' ih => rw [← scoot m', ih]
+  -- Necklace.kStepVector w 0 pLen = pVec (since period = slice w 0 pLen)
+  rw [h_eq_zero]
+  unfold Necklace.kStepVector
+  congr 1
+  rw [show 0 + pLen = pLen from by omega]
+  exact (period_eq_slice_zero w).symm
+
+/-- Splitting a prefix: the prefix of length a+b equals the prefix of length a
+    plus the k-step vector starting at position a with length b -/
+private lemma kStepVector_prefix_add [NeZero n] [DecidableEq α]
+    (w : Necklace α n) (a b : ℕ) (c : α) :
+    Necklace.kStepVector w 0 (a + b) c = Necklace.kStepVector w 0 a c + Necklace.kStepVector w a b c := by
+  unfold Necklace.kStepVector
+  rw [← ZVector_ofList_append]
+  congr 1
+  -- slice w 0 (a + b) = slice w 0 a ++ slice w a (a + b)
+  unfold Necklace.slice
+  simp only [Nat.zero_add, Nat.add_sub_cancel_left, Nat.sub_zero,
+             bind_pure_comp, Functor.map, List.map_map]
+  rw [show a + b = a + b from rfl]
+  rw [List.range_add, List.map_append, List.map_map]
+  congr 1
+  ext i
+  simp [Function.comp]
+
+/-- A generator of a binary word cannot be the zero vector.
+    If g = 0, then all prefixes are multiples of the period vector p,
+    but prefix(1) has total count 1 while k·p has total count k·pLen ≠ 1 for pLen ≥ 2. -/
+lemma isGenerator_ne_zero [NeZero n] (w : BinaryNecklace n)
+    (hbin : BinaryNecklace.isBinary w) (g : ZVector BinaryStep)
+    (hg : IsGenerator w g) : g ≠ 0 := by
+  intro hg_zero
+  obtain ⟨_, r, hprefix_fwd, _⟩ := hg
+  let w' := fun i => w (i + r)
+  let per := Necklace.period w
+  let pLen := per.length
+  let pVec := ZVector.ofList per
+  have hpLen_ge_2 : pLen ≥ 2 := period_length_ge_two_of_binary w hbin
+  have hpLen_pos : 0 < pLen := by omega
+  obtain ⟨_, k₁, hpfx1⟩ := hprefix_fwd ⟨0, hpLen_pos⟩
+  have hpfx1_L : (Necklace.kStepVector w' 0 1) BinaryStep.L = k₁ * pVec BinaryStep.L := by
+    have := hpfx1 BinaryStep.L
+    simp only [hg_zero, ZVector.zero_apply, mul_zero, zero_add] at this
+    exact this
+  have hpfx1_s : (Necklace.kStepVector w' 0 1) BinaryStep.s = k₁ * pVec BinaryStep.s := by
+    have := hpfx1 BinaryStep.s
+    simp only [hg_zero, ZVector.zero_apply, mul_zero, zero_add] at this
+    exact this
+  have hpfx1_total : (Necklace.kStepVector w' 0 1) BinaryStep.L +
+      (Necklace.kStepVector w' 0 1) BinaryStep.s = 1 := by
+    unfold Necklace.kStepVector Necklace.slice
+    simp only [Nat.add_sub_cancel_left, List.range_one, ZVector.ofList]
+    cases hw'0 : w' 0 <;> simp [hw'0]
+  have hpVec_total : pVec BinaryStep.L + pVec BinaryStep.s = pLen := by
+    show (ZVector.ofList per) BinaryStep.L + (ZVector.ofList per) BinaryStep.s = pLen
+    unfold ZVector.ofList
+    have hsum := binaryStep_count_sum per
+    simp only [List.count_eq_countP, List.countP_eq_length_filter] at hsum
+    norm_cast
+  have hk1_pLen : k₁ * pLen = 1 := by
+    calc k₁ * pLen
+      = k₁ * (pVec BinaryStep.L + pVec BinaryStep.s) := by rw [hpVec_total]
+      _ = k₁ * pVec BinaryStep.L + k₁ * pVec BinaryStep.s := by ring
+      _ = (Necklace.kStepVector w' 0 1) BinaryStep.L +
+          (Necklace.kStepVector w' 0 1) BinaryStep.s := by rw [hpfx1_L, hpfx1_s]
+      _ = 1 := hpfx1_total
+  have hpLen_ge_2_int : (pLen : ℤ) ≥ 2 := Int.ofNat_le.mpr hpLen_ge_2
+  rcases Int.lt_or_le 0 k₁ with hk1_pos | hk1_le
+  · have : k₁ * pLen ≥ 1 * pLen := mul_le_mul_of_nonneg_right hk1_pos (Int.natCast_nonneg pLen)
+    simp only [one_mul] at this; omega
+  · have : k₁ * pLen ≤ 0 := mul_nonpos_of_nonpos_of_nonneg hk1_le (Int.natCast_nonneg pLen)
+    omega
+
+/-- The period length divides n. Extracted from the proof of kStepVector_mod_period. -/
+lemma period_dvd_length [NeZero n] [DecidableEq α] (w : Necklace α n) :
+    (Necklace.period w).length ∣ n := by
+  have hRep : Necklace.isRepetitionOf w (Necklace.period w) = true := by
+    unfold Necklace.period
+    cases hfind : ((List.range n).tail.map (Necklace.slice w 0)).find?
+        (Necklace.isRepetitionOf w) with
+    | some pfx => simp only [Option.getD_some]; exact List.find?_some hfind
+    | none =>
+      simp only [Option.getD_none]
+      unfold Necklace.isRepetitionOf
+      simp only [Necklace.slice_length, Nat.sub_zero, ne_eq,
+        Nat.pos_iff_ne_zero.mp (NeZero.pos n), ↓reduceIte,
+        Nat.mod_self, not_true_eq_false]
+      rw [List.all_eq_true]
+      intro i hi
+      rw [List.mem_range] at hi
+      rw [decide_eq_true_eq, Nat.mod_eq_of_lt hi]
+      unfold Necklace.slice
+      simp only [bind_pure_comp, Functor.map, Nat.sub_zero, Nat.cast_zero, zero_add,
+            List.map_map, Function.comp, List.getElem?_map, List.getElem?_range hi,
+            Option.map]
+  unfold Necklace.isRepetitionOf at hRep
+  simp only [ne_eq] at hRep
+  split at hRep
+  · exact absurd hRep Bool.false_ne_true
+  · split at hRep
+    · exact absurd hRep Bool.false_ne_true
+    · rename_i _ h2
+      push_neg at h2
+      exact Nat.dvd_of_mod_eq_zero h2
+
+/-- Casting ZMod.val back to ZMod gives back the original element. -/
+private lemma natCast_zmod_val [NeZero n] (r : ZMod n) : (ZMod.val r : ZMod n) = r := by
+  cases n with
+  | zero => exact absurd rfl (NeZero.ne 0)
+  | succ m =>
+    -- ZMod (m+1) = Fin (m+1), use Fin extensionality
+    exact Fin.ext (by simp [])
+
+/-- Rotating a necklace preserves k-step vectors (just shifts starting position). -/
+lemma kStepVector_rotate [NeZero n] [DecidableEq α]
+    (w : Necklace α n) (r : ZMod n) (m k : ℕ) :
+    Necklace.kStepVector (fun i => w (i + r)) m k =
+    Necklace.kStepVector w (ZMod.val r + m) k := by
+  unfold Necklace.kStepVector
+  congr 1
+  -- Show slice equality
+  unfold Necklace.slice
+  simp only [Nat.add_sub_cancel_left]
+  apply List.ext_getElem
+  · simp only [bind_pure_comp, Functor.map, List.length_map, List.length_range]
+  · intro l h₁ h₂
+    simp only [bind_pure_comp, Functor.map, List.map_map, Function.comp,
+               List.getElem_map, List.getElem_range]
+    show w ((↑m + ↑l : ZMod n) + r) = w (↑(ZMod.val r + m) + ↑l : ZMod n)
+    congr 1
+    rw [Nat.cast_add, natCast_zmod_val]; ring
+
+/-- Rotating a necklace preserves the set of distinct k-step vectors. -/
+lemma distinctKStepVectors_rotate [NeZero n] [DecidableEq α] [Fintype α]
+    (w : Necklace α n) (r : ZMod n) (k : ℕ) :
+    distinctKStepVectors (fun i => w (i + r)) k = distinctKStepVectors w k := by
+  unfold distinctKStepVectors Necklace.allKStepVectors
+  ext v; simp only [List.mem_toFinset, List.mem_map, List.mem_range]
+  constructor
+  · rintro ⟨i, hi, hv⟩
+    rw [kStepVector_rotate] at hv
+    exact ⟨(ZMod.val r + i) % n, Nat.mod_lt _ (NeZero.pos n),
+           by rwa [kStepVector_mod_n]⟩
+  · rintro ⟨i, hi, hv⟩
+    -- Find i' such that r.val + i' ≡ i (mod n)
+    have hr_lt : ZMod.val r < n := ZMod.val_lt r
+    by_cases hle : ZMod.val r ≤ i
+    · -- i' = i - r.val
+      refine ⟨i - ZMod.val r, by omega, ?_⟩
+      rw [kStepVector_rotate, ← hv, ← kStepVector_mod_n]
+      congr 1
+      rw [Nat.add_sub_cancel' hle, Nat.mod_eq_of_lt hi]
+    · -- i' = i + n - r.val
+      push_neg at hle
+      refine ⟨i + n - ZMod.val r, by omega, ?_⟩
+      rw [kStepVector_rotate, ← hv, ← kStepVector_mod_n]
+      congr 1
+      have : ZMod.val r + (i + n - ZMod.val r) = i + n := by omega
+      rw [this, Nat.add_mod_right, Nat.mod_eq_of_lt hi]
+
+/-- Rotating a necklace preserves the number of distinct k-step multisets. -/
+lemma allKStepMultisets_toFinset_card_rotate [NeZero n] [DecidableEq α] [Fintype α]
+    (w : Necklace α n) (r : ZMod n) (k : ℕ) :
+    (Necklace.allKStepMultisets (fun i => w (i + r)) k).toFinset.card =
+    (Necklace.allKStepMultisets w k).toFinset.card := by
+  rw [← distinctKStepVectors_card_eq, ← distinctKStepVectors_card_eq]
+  congr 1; exact distinctKStepVectors_rotate w r k
+
+/-- k-step vector as a difference of prefix vectors. -/
+private lemma kStepVector_as_prefix_diff [NeZero n] [DecidableEq α]
+    (w : Necklace α n) (i k : ℕ) (a : α) :
+    (Necklace.kStepVector w i k a : ℤ) =
+    Necklace.kStepVector w 0 (i + k) a - Necklace.kStepVector w 0 i a := by
+  have := kStepVector_prefix_add w i k a
+  linarith
+
+/-- Prefix of length m + pLen = prefix of length m + period vector. -/
+private lemma prefix_period_shift [NeZero n] [DecidableEq α]
+    (w : Necklace α n) (m : ℕ) (a : α) :
+    (Necklace.kStepVector w 0 (m + (Necklace.period w).length) a : ℤ) =
+    Necklace.kStepVector w 0 m a + (ZVector.ofList (Necklace.period w)) a := by
+  have h := kStepVector_prefix_add w m (Necklace.period w).length a
+  rw [kStepVector_full_period] at h
+  linarith
+
+/-- Prefix of length m can be decomposed using m mod pLen and m / pLen. -/
+lemma prefix_mod_period [NeZero n] [DecidableEq α]
+    (w : Necklace α n) (m : ℕ) (a : α) :
+    (Necklace.kStepVector w 0 m a : ℤ) =
+    Necklace.kStepVector w 0 (m % (Necklace.period w).length) a +
+    ↑(m / (Necklace.period w).length) * (ZVector.ofList (Necklace.period w)) a := by
+  set pLen := (Necklace.period w).length
+  have hpLen_pos : 0 < pLen := period_length_pos w
+  -- Induction on q = m / pLen
+  suffices ∀ q m', m' / pLen = q →
+      (Necklace.kStepVector w 0 m' a : ℤ) =
+      Necklace.kStepVector w 0 (m' % pLen) a +
+      ↑q * (ZVector.ofList (Necklace.period w)) a from
+    this (m / pLen) m rfl
+  intro q
+  induction q with
+  | zero =>
+    intro m' hq
+    have hm'_lt : m' < pLen := by
+      by_contra h; push_neg at h
+      exact absurd (Nat.div_pos h hpLen_pos) (by omega)
+    simp [Nat.mod_eq_of_lt hm'_lt]
+  | succ q' ih =>
+    intro m' hq
+    have hm'_ge : pLen ≤ m' := by
+      by_contra h; push_neg at h
+      exact absurd (Nat.div_eq_of_lt h) (by omega)
+    -- Rewrite only the LHS: m' = (m' - pLen) + pLen
+    conv_lhs => rw [show m' = (m' - pLen) + pLen from by omega]
+    rw [prefix_period_shift]
+    have hdiv_sub : (m' - pLen) / pLen = q' := by
+      have : m' / pLen = (m' - pLen) / pLen + 1 := by
+        conv_lhs => rw [show m' = (m' - pLen) + pLen from by omega]
+        exact Nat.add_div_right (m' - pLen) hpLen_pos
+      omega
+    have hmod_sub : (m' - pLen) % pLen = m' % pLen := by
+      conv_rhs => rw [show m' = (m' - pLen) + pLen from by omega]
+      exact (Nat.add_mod_right (m' - pLen) pLen).symm
+    rw [ih (m' - pLen) hdiv_sub, hmod_sub]
+    push_cast; ring
+
+/-- A full period of a rotated necklace equals the period vector of the original (pointwise). -/
+private lemma kStepVector_rotated_full_period [NeZero n] [DecidableEq α]
+    (w : Necklace α n) (r : ZMod n) (m : ℕ) (a : α) :
+    Necklace.kStepVector (fun i => w (i + r)) m (Necklace.period w).length a =
+    (ZVector.ofList (Necklace.period w)) a := by
+  rw [kStepVector_rotate]
+  exact kStepVector_full_period w (ZMod.val r + m) a
+
+/-- Prefix decomposition for a rotated necklace using the original's period. -/
+private lemma prefix_mod_period_rotated [NeZero n] [DecidableEq α]
+    (w : Necklace α n) (r : ZMod n) (m : ℕ) (a : α) :
+    let pLen := (Necklace.period w).length
+    let pVec := ZVector.ofList (Necklace.period w)
+    let w' := fun i => w (i + r)
+    (Necklace.kStepVector w' 0 m a : ℤ) =
+    Necklace.kStepVector w' 0 (m % pLen) a + ↑(m / pLen) * pVec a := by
+  set pLen := (Necklace.period w).length
+  set pVec := ZVector.ofList (Necklace.period w)
+  set w' := fun i => w (i + r)
+  have hpLen_pos : 0 < pLen := period_length_pos w
+  -- prefix_period_shift for w': kStepVector w' 0 (m + pLen) a = kStepVector w' 0 m a + pVec a
+  have shift : ∀ m', (Necklace.kStepVector w' 0 (m' + pLen) a : ℤ) =
+      Necklace.kStepVector w' 0 m' a + pVec a := by
+    intro m'
+    have h := kStepVector_prefix_add w' m' pLen a
+    rw [show Necklace.kStepVector w' m' pLen a = pVec a from
+      kStepVector_rotated_full_period w r m' a] at h
+    linarith
+  -- Induction on q = m / pLen
+  suffices ∀ q m', m' / pLen = q →
+      (Necklace.kStepVector w' 0 m' a : ℤ) =
+      Necklace.kStepVector w' 0 (m' % pLen) a + ↑q * pVec a from
+    this (m / pLen) m rfl
+  intro q
+  induction q with
+  | zero =>
+    intro m' hq
+    have hm'_lt : m' < pLen := by
+      by_contra h; push_neg at h
+      exact absurd (Nat.div_pos h hpLen_pos) (by omega)
+    simp [Nat.mod_eq_of_lt hm'_lt]
+  | succ q' ih =>
+    intro m' hq
+    have hm'_ge : pLen ≤ m' := by
+      by_contra h; push_neg at h
+      exact absurd (Nat.div_eq_of_lt h) (by omega)
+    conv_lhs => rw [show m' = (m' - pLen) + pLen from by omega]
+    rw [shift]
+    have hdiv_sub : (m' - pLen) / pLen = q' := by
+      have : m' / pLen = (m' - pLen) / pLen + 1 := by
+        conv_lhs => rw [show m' = (m' - pLen) + pLen from by omega]
+        exact Nat.add_div_right (m' - pLen) hpLen_pos
+      omega
+    have hmod_sub : (m' - pLen) % pLen = m' % pLen := by
+      conv_rhs => rw [show m' = (m' - pLen) + pLen from by omega]
+      exact (Nat.add_mod_right (m' - pLen) pLen).symm
+    rw [ih (m' - pLen) hdiv_sub, hmod_sub]
+    push_cast; ring
+
+/-- Shifting the starting position by pLen doesn't change the k-step vector (unconditional on k). -/
+lemma kStepVector_add_period [NeZero n] [DecidableEq α]
+    (w : Necklace α n) (m k : ℕ) :
+    Necklace.kStepVector w (m + (Necklace.period w).length) k = Necklace.kStepVector w m k := by
+  -- Use prefix decomposition: kStepVector w m k a = prefix(m+k) a - prefix(m) a
+  -- prefix(m + pLen) a = prefix(m) a + pVec a (by prefix_period_shift)
+  -- So kStepVector w (m+pLen) k a = prefix(m+pLen+k) a - prefix(m+pLen) a
+  --   = (prefix(m+k) a + pVec a) - (prefix(m) a + pVec a) = kStepVector w m k a
+  funext a
+  have h1 := kStepVector_as_prefix_diff w (m + (Necklace.period w).length) k a
+  have h2 := kStepVector_as_prefix_diff w m k a
+  have hshift1 := prefix_period_shift w (m + k) a
+  have hshift2 := prefix_period_shift w m a
+  rw [show m + (Necklace.period w).length + k = (m + k) + (Necklace.period w).length from by ring] at h1
+  linarith
+
+/-- kStepVector is periodic in starting position with period pLen (unconditional on k). -/
+lemma kStepVector_mod_period' [NeZero n] [DecidableEq α]
+    (w : Necklace α n) (m k : ℕ) :
+    Necklace.kStepVector w (m % (Necklace.period w).length) k = Necklace.kStepVector w m k := by
+  set pLen := (Necklace.period w).length
+  have hpLen_pos : 0 < pLen := period_length_pos w
+  suffices ∀ q m', m' / pLen = q →
+      Necklace.kStepVector w (m' % pLen) k = Necklace.kStepVector w m' k from
+    this (m / pLen) m rfl
+  intro q
+  induction q with
+  | zero =>
+    intro m' hq
+    have hm'_lt : m' < pLen := by
+      by_contra h; push_neg at h
+      exact absurd (Nat.div_pos h hpLen_pos) (by omega)
+    simp [Nat.mod_eq_of_lt hm'_lt]
+  | succ q' ih =>
+    intro m' hq
+    have hm'_ge : pLen ≤ m' := by
+      by_contra h; push_neg at h
+      exact absurd (Nat.div_eq_of_lt h) (by omega)
+    have hmod_sub : (m' - pLen) % pLen = m' % pLen := by
+      conv_rhs => rw [show m' = (m' - pLen) + pLen from by omega]
+      exact (Nat.add_mod_right (m' - pLen) pLen).symm
+    have hdiv_sub : (m' - pLen) / pLen = q' := by
+      have : m' / pLen = (m' - pLen) / pLen + 1 := by
+        conv_lhs => rw [show m' = (m' - pLen) + pLen from by omega]
+        exact Nat.add_div_right (m' - pLen) hpLen_pos
+      omega
+    rw [← hmod_sub, ih (m' - pLen) hdiv_sub]
+    conv_rhs => rw [show m' = (m' - pLen) + pLen from by omega]
+    exact (kStepVector_add_period w (m' - pLen) k).symm
+
+-- Helper: Among 3 integers in (-(p), p) with pairwise differences divisible by p,
+-- at least two must be equal.
+private lemma three_in_interval_two_equal (p : ℤ) (hp : 0 < p)
+    (d₁ d₂ d₃ : ℤ) (hlo₁ : -p < d₁) (hhi₁ : d₁ < p) (hlo₂ : -p < d₂) (hhi₂ : d₂ < p)
+    (hlo₃ : -p < d₃) (hhi₃ : d₃ < p)
+    (hdvd₁₂ : p ∣ (d₁ - d₂)) (hdvd₁₃ : p ∣ (d₁ - d₃)) (hdvd₂₃ : p ∣ (d₂ - d₃))
+    : d₁ = d₂ ∨ d₁ = d₃ ∨ d₂ = d₃ := by
+  have trichotomy : ∀ (a b : ℤ), -p < a → a < p → -p < b → b < p → p ∣ (a - b) →
+      a = b ∨ a = b + p ∨ a = b - p := by
+    intro a b hla ha hlb hb hdvd
+    obtain ⟨c, hc⟩ := hdvd
+    have hc_bound : c * p > -(2 * p) ∧ c * p < 2 * p := by constructor <;> linarith
+    have hc_lo : -2 < c := by
+      by_contra h; push_neg at h
+      have : (-2 - c) ≥ 0 := by omega
+      have : c * p ≤ -(2 * p) := by nlinarith [mul_nonneg this hp.le]
+      linarith [hc_bound.1]
+    have hc_hi : c < 2 := by
+      by_contra h; push_neg at h
+      have : (c - 2) ≥ 0 := by omega
+      have : c * p ≥ 2 * p := by nlinarith [mul_nonneg this hp.le]
+      linarith [hc_bound.2]
+    interval_cases c <;> omega
+  have h₁₂ := trichotomy d₁ d₂ hlo₁ hhi₁ hlo₂ hhi₂ hdvd₁₂
+  have h₁₃ := trichotomy d₁ d₃ hlo₁ hhi₁ hlo₃ hhi₃ hdvd₁₃
+  by_contra hall_ne; push_neg at hall_ne
+  obtain ⟨hne₁₂, hne₁₃, hne₂₃⟩ := hall_ne
+  have h₁₂' : d₁ = d₂ + p ∨ d₁ = d₂ - p := by
+    rcases h₁₂ with rfl | h | h; exact absurd rfl hne₁₂; left; exact h; right; exact h
+  have h₁₃' : d₁ = d₃ + p ∨ d₁ = d₃ - p := by
+    rcases h₁₃ with rfl | h | h; exact absurd rfl hne₁₃; left; exact h; right; exact h
+  rcases h₁₂' with h | h <;> rcases h₁₃' with h' | h'
+  · exact absurd (by omega : d₂ = d₃) hne₂₃
+  · linarith
+  · linarith
+  · exact absurd (by omega : d₂ = d₃) hne₂₃
+
+set_option maxHeartbeats 3200000
+/-- Core lemma: If a binary necklace has a generator, then for every step size k,
+    there are at most 2 distinct k-step vectors. -/
+private lemma gen_implies_at_most_two_varieties [NeZero n]
+    (w : BinaryNecklace n) (hbin : BinaryNecklace.isBinary w)
+    (g : ZVector BinaryStep) (hg : IsGenerator w g)
+    (k : ℕ) (_ : 0 < k) (_ : k < n) :
+    (distinctKStepVectors w k).card ≤ 2 := by
+  -- Extract generator data
+  obtain ⟨⟨k₀, hk₀_lt_pLen, i₀, hg_appears⟩, r, hprefix_fwd, hprefix_bwd⟩ := hg
+  set per := Necklace.period w with hper_def
+  set pLen := per.length with hpLen_def
+  set pVec := ZVector.ofList per with hpVec_def
+  set w' := fun i => w (i + r) with hw'_def
+  have hpLen_ge_2 : pLen ≥ 2 := period_length_ge_two_of_binary w hbin
+  have hpLen_pos : 0 < pLen := by omega
+  have hpLen_dvd_n : pLen ∣ n := period_dvd_length w
+  have hpLen_le_n : pLen ≤ n := Necklace.period_length_le_n w
+  -- Coprimality: gcd(k₀, pLen) = 1
+  have hk₀_pos : 0 < k₀ := by
+    by_contra h; push_neg at h
+    have hk₀_zero : k₀ = 0 := by omega
+    exact isGenerator_ne_zero w hbin g ⟨⟨k₀, hk₀_lt_pLen, i₀, hg_appears⟩, r, hprefix_fwd, hprefix_bwd⟩ (by
+      rw [← hg_appears, hk₀_zero]
+      unfold Necklace.kStepVector Necklace.slice
+      simp only [Nat.add_zero, Nat.sub_self, List.range_zero]; rfl)
+  have hcoprime : Nat.Coprime k₀ pLen := by
+    -- Inline the Bézout argument from generator_implies_coprime_to_period
+    -- From prefix(1) = j₁·g + c₁·p, total count gives j₁·k₀ + c₁·pLen = 1
+    obtain ⟨j₁, c₁, hpfx1⟩ := hprefix_fwd ⟨0, hpLen_pos⟩
+    have hpfx1_total : (Necklace.kStepVector w' 0 1 BinaryStep.L : ℤ) +
+        Necklace.kStepVector w' 0 1 BinaryStep.s = 1 := by
+      exact_mod_cast kStepVector_total_count w' 0 1
+    have hbezout : (j₁.val : ℤ) * k₀ + c₁ * pLen = 1 := by
+      have hL := hpfx1 BinaryStep.L; have hs := hpfx1 BinaryStep.s
+      simp only [Nat.zero_add] at hL hs
+      have hg_tot : (g BinaryStep.L : ℤ) + g BinaryStep.s = k₀ := by
+        rw [← hg_appears]; exact_mod_cast kStepVector_total_count w i₀.val k₀
+      have hpVec_tot : (pVec BinaryStep.L : ℤ) + pVec BinaryStep.s = pLen := by
+        show (ZVector.ofList per) BinaryStep.L + (ZVector.ofList per) BinaryStep.s = pLen
+        unfold ZVector.ofList
+        have hsum := binaryStep_count_sum per
+        simp only [List.count_eq_countP, List.countP_eq_length_filter] at hsum
+        norm_cast
+      have : (Necklace.kStepVector w' 0 1 BinaryStep.L : ℤ) +
+             Necklace.kStepVector w' 0 1 BinaryStep.s =
+             ↑j₁.val * (g BinaryStep.L + g BinaryStep.s) +
+             c₁ * (pVec BinaryStep.L + pVec BinaryStep.s) := by linarith
+      rw [hg_tot, hpVec_tot] at this; linarith
+    show Nat.gcd k₀ pLen = 1
+    have hdvd : (Nat.gcd k₀ pLen : ℤ) ∣ 1 := by
+      calc (↑(Nat.gcd k₀ pLen) : ℤ)
+        ∣ ↑j₁.val * ↑k₀ + c₁ * ↑pLen :=
+          dvd_add (dvd_mul_of_dvd_right (Int.natCast_dvd_natCast.mpr (Nat.gcd_dvd_left k₀ pLen)) _)
+                  (dvd_mul_of_dvd_right (Int.natCast_dvd_natCast.mpr (Nat.gcd_dvd_right k₀ pLen)) _)
+        _ = 1 := hbezout
+    have hgcd_pos : 0 < Nat.gcd k₀ pLen := Nat.pos_of_ne_zero (by
+      intro h; simp [h] at hdvd)
+    have hgcd_le : Nat.gcd k₀ pLen ≤ 1 := by exact_mod_cast Int.le_of_dvd one_pos hdvd
+    omega
+  -- Total counts
+  have hg_total : (g BinaryStep.L : ℤ) + g BinaryStep.s = k₀ := by
+    rw [← hg_appears]; exact_mod_cast kStepVector_total_count w i₀.val k₀
+  have hpVec_total : (pVec BinaryStep.L : ℤ) + pVec BinaryStep.s = pLen := by
+    show (ZVector.ofList per) BinaryStep.L + (ZVector.ofList per) BinaryStep.s = pLen
+    unfold ZVector.ofList
+    have hsum := binaryStep_count_sum per
+    simp only [List.count_eq_countP, List.countP_eq_length_filter] at hsum
+    norm_cast
+  -- Transfer to rotated word: distinctKStepVectors w k = distinctKStepVectors w' k
+  rw [← distinctKStepVectors_rotate w r k]
+  -- Now work with w'. Every k-step vector of w' appears among positions 0..pLen-1
+  -- (by kStepVector_mod_period on w, transferred to w' via rotation)
+  -- So it suffices to bound the image of {0,...,pLen-1} → kStepVector w' i k
+  suffices h : (Finset.image (fun i : Fin pLen => Necklace.kStepVector w' i.val k)
+    Finset.univ).card ≤ 2 by
+    calc (distinctKStepVectors (fun i => w (i + r)) k).card
+      = ((Necklace.allKStepVectors (fun i => w (i + r)) k).toFinset).card := rfl
+      _ ≤ (Finset.image (fun i : Fin pLen => Necklace.kStepVector w' i.val k) Finset.univ).card := by
+        apply Finset.card_le_card
+        intro v hv
+        simp only [Finset.mem_image, Finset.mem_univ, true_and]
+        unfold Necklace.allKStepVectors at hv
+        rw [List.mem_toFinset, List.mem_map] at hv
+        obtain ⟨i, hi, hvi⟩ := hv
+        rw [List.mem_range] at hi
+        -- hvi : kStepVector (fun j => w (j + r)) i k = v
+        -- Goal: ∃ a : Fin pLen, kStepVector w' a.val k = v
+        -- w' is periodic in starting position with period pLen (via kStepVector_rotate + kStepVector_mod_period')
+        have hw'_mod_period : ∀ m, Necklace.kStepVector (fun j => w (j + r)) (m % pLen) k =
+            Necklace.kStepVector (fun j => w (j + r)) m k := by
+          intro m
+          simp only [kStepVector_rotate]
+          -- Goal: kStepVector w (r.val + m % pLen) k = kStepVector w (r.val + m) k
+          rw [← kStepVector_mod_period' w (ZMod.val r + m % pLen) k,
+              ← kStepVector_mod_period' w (ZMod.val r + m) k]
+          congr 1
+          rw [Nat.add_mod, Nat.add_mod (ZMod.val r) m pLen, Nat.mod_mod_of_dvd m (dvd_refl pLen)]
+        refine ⟨⟨i % pLen, Nat.mod_lt i hpLen_pos⟩, ?_⟩
+        rw [show (⟨i % pLen, Nat.mod_lt i hpLen_pos⟩ : Fin pLen).val = i % pLen from rfl]
+        simp only [hw'_def]
+        rw [hw'_mod_period i, hvi]
+      _ ≤ 2 := h
+  -- Main goal: show at most 2 distinct k-step vectors among positions 0..pLen-1
+  -- Use the Delta-j argument
+  -- Step 1: Extract J function from prefix bijection
+  -- For each prefix length m+1 (m : Fin pLen), get j(m) : Fin pLen and c(m) : ℤ
+  -- such that prefix(m+1)(a) = j(m) * g(a) + c(m) * pVec(a)
+  -- Step 2: Show J is bijective
+  -- Step 3: Express k-step vectors in terms of Delta_j
+  -- Step 4: Show Delta_j mod pLen is constant
+  -- Step 5: At most 2 values of Delta_j
+
+  -- Define the k-step vector at position i as a function of Delta_j
+  -- kStepVector(w', i, k)(a) = prefix(i+k)(a) - prefix(i)(a)
+  -- where prefix(m)(a) is defined in terms of J, C, g, pVec
+
+  -- For any i in {0,...,pLen-1}, and any value of Delta_j, the k-step vector is:
+  -- v(a) = Delta_j * g(a) + Delta_c * pVec(a)
+  -- where Delta_j * k₀ + Delta_c * pLen = k (total count constraint)
+  -- So Delta_c = (k - Delta_j * k₀) / pLen and the k-step vector is determined by Delta_j.
+
+  -- Since Delta_j ≡ const (mod pLen) and Delta_j ∈ {-(pLen-1),...,pLen-1},
+  -- there are at most 2 possible Delta_j values.
+
+  -- We prove this by showing the image is contained in a set of size ≤ 2.
+
+  -- First, define the function that maps Delta_j to a k-step vector
+  let mkVec : ℤ → ZVector BinaryStep := fun dj =>
+    fun a => dj * g a + ((k - dj * k₀) / pLen) * pVec a
+
+  -- The residue class of Delta_j: d₀ = the unique element of {0,...,pLen-1} with d₀ * k₀ ≡ k (mod pLen)
+  -- Since gcd(k₀, pLen) = 1, this exists and is unique.
+  -- We don't need to compute d₀ explicitly; we just need to know Delta_j is in {d₀, d₀ - pLen}.
+
+  -- Key claim: every k-step vector at position i equals mkVec(dj) for some dj with dj * k₀ ≡ k (mod pLen)
+  -- and -(pLen-1) ≤ dj ≤ pLen-1.
+
+  -- We show all k-step vectors are contained in {mkVec d₀, mkVec (d₀ - pLen)} for a suitable d₀.
+
+  -- Proof strategy: show the image of the Fin pLen → ZVector map factors through mkVec
+  -- with at most 2 inputs.
+
+  -- For each i : Fin pLen, express kStepVector(w', i, k) using the prefix decomposition.
+  -- prefix(m) for m ∈ {1,...,pLen}: from hprefix_fwd, equals j(m-1)*g + c(m-1)*pVec
+  -- prefix(0) = 0
+  -- prefix(m) for m > pLen: use prefix_mod_period
+
+  -- Let's do this more directly: show each k-step vector at position i depends only on
+  -- a quantity that takes at most 2 values.
+
+  -- Actually, let's use a cleaner approach: show the set of k-step vectors (at positions 0..pLen-1)
+  -- is contained in the image of mkVec on a set of at most 2 integers.
+
+  -- CLAIM: For each i : Fin pLen, kStepVector(w', i.val, k) = mkVec(dj_i) where
+  --   dj_i * k₀ ≡ k (mod pLen) and -(pLen-1) ≤ dj_i ≤ pLen-1.
+  -- This means all dj_i are in the same residue class mod pLen, and the range {-(pLen-1),...,pLen-1}
+  -- has at most 2 elements per residue class.
+
+  -- Let's prove the claim and conclude.
+
+  -- Step 1: For each m : Fin pLen, choose j(m) and c(m)
+  have hJ_exists : ∀ m : Fin pLen, ∃ j : Fin pLen, ∃ c : ℤ, ∀ a : BinaryStep,
+      (Necklace.kStepVector w' 0 (m.val + 1) a : ℤ) = ↑j.val * g a + c * pVec a :=
+    fun m => hprefix_fwd m
+  -- Use choice to get J and C functions
+  let J : Fin pLen → Fin pLen := fun m => (hJ_exists m).choose
+  let C : Fin pLen → ℤ := fun m => (hJ_exists m).choose_spec.choose
+  have hJC : ∀ (m : Fin pLen) (a : BinaryStep),
+      (Necklace.kStepVector w' 0 (m.val + 1) a : ℤ) = ↑(J m).val * g a + C m * pVec a :=
+    fun m => (hJ_exists m).choose_spec.choose_spec
+
+  -- Step 2: Show J is injective (hence bijective)
+  -- If J(m₁) = J(m₂), then prefix(m₁+1) = prefix(m₂+1) (mod period lattice)
+  -- => (m₁+1) and (m₂+1) have the same total count mod pLen
+  -- => m₁ + 1 ≡ m₂ + 1 (mod pLen) => m₁ = m₂ (since both < pLen)
+  have hJ_inj : Function.Injective J := by
+    intro m₁ m₂ hJ_eq
+    -- From hJC, for all a: prefix(m₁+1)(a) = J(m₁)*g(a) + C(m₁)*pVec(a)
+    -- and prefix(m₂+1)(a) = J(m₂)*g(a) + C(m₂)*pVec(a)
+    -- Since J(m₁) = J(m₂), difference is (C(m₁) - C(m₂)) * pVec(a)
+    -- Total count: prefix(m)(a) summed over a = m (since it counts m letters)
+    -- So m₁+1 = J(m₁)*k₀ + C(m₁)*pLen and m₂+1 = J(m₂)*k₀ + C(m₂)*pLen
+    -- Since J(m₁) = J(m₂): m₁+1 - (m₂+1) = (C(m₁) - C(m₂)) * pLen
+    -- Both m₁.val, m₂.val < pLen, so |m₁ - m₂| < pLen, so C(m₁) = C(m₂) and m₁ = m₂
+    have htotal₁ : (↑(m₁.val + 1) : ℤ) = ↑(J m₁).val * k₀ + C m₁ * pLen := by
+      have hL := hJC m₁ BinaryStep.L
+      have hs := hJC m₁ BinaryStep.s
+      have hpfx_total : (Necklace.kStepVector w' 0 (m₁.val + 1) BinaryStep.L : ℤ) +
+          Necklace.kStepVector w' 0 (m₁.val + 1) BinaryStep.s = m₁.val + 1 := by
+        exact_mod_cast kStepVector_total_count w' 0 (m₁.val + 1)
+      have hsum : (m₁.val + 1 : ℤ) = ↑(J m₁).val * (g BinaryStep.L + g BinaryStep.s) +
+          C m₁ * (pVec BinaryStep.L + pVec BinaryStep.s) := by linarith
+      rw [hg_total, hpVec_total] at hsum; exact hsum
+    have htotal₂ : (↑(m₂.val + 1) : ℤ) = ↑(J m₂).val * k₀ + C m₂ * pLen := by
+      have hL := hJC m₂ BinaryStep.L
+      have hs := hJC m₂ BinaryStep.s
+      have hpfx_total : (Necklace.kStepVector w' 0 (m₂.val + 1) BinaryStep.L : ℤ) +
+          Necklace.kStepVector w' 0 (m₂.val + 1) BinaryStep.s = m₂.val + 1 := by
+        exact_mod_cast kStepVector_total_count w' 0 (m₂.val + 1)
+      have hsum : (m₂.val + 1 : ℤ) = ↑(J m₂).val * (g BinaryStep.L + g BinaryStep.s) +
+          C m₂ * (pVec BinaryStep.L + pVec BinaryStep.s) := by linarith
+      rw [hg_total, hpVec_total] at hsum; exact hsum
+    have hdiff : (↑(m₁.val + 1) : ℤ) - ↑(m₂.val + 1) = (C m₁ - C m₂) * ↑pLen := by
+      rw [htotal₁, htotal₂]; simp [hJ_eq]; ring
+    have hbound₁ : (m₁.val : ℤ) < pLen := by exact_mod_cast m₁.isLt
+    have hbound₂ : (m₂.val : ℤ) < pLen := by exact_mod_cast m₂.isLt
+    have hpLen_pos_int : (0 : ℤ) < pLen := by exact_mod_cast hpLen_pos
+    have hdiff' : (m₁.val : ℤ) - m₂.val = (C m₁ - C m₂) * pLen := by
+      have := hdiff; push_cast at this ⊢; linarith
+    have hC_eq : C m₁ = C m₂ := by
+      by_contra hne
+      -- C m₁ - C m₂ ≠ 0, so (C m₁ - C m₂) * pLen has |.| ≥ pLen
+      -- But |m₁.val - m₂.val| < pLen since both < pLen and both ≥ 0
+      rcases ne_iff_lt_or_gt.mp (sub_ne_zero.mpr hne) with hlt | hgt
+      · -- C m₁ - C m₂ < 0, so (C m₁ - C m₂) ≤ -1
+        have h1 : C m₁ - C m₂ ≤ -1 := by omega
+        have : (m₁.val : ℤ) - m₂.val ≤ -pLen := by nlinarith
+        linarith [Int.natCast_nonneg m₁.val]
+      · -- C m₁ - C m₂ > 0, so (C m₁ - C m₂) ≥ 1
+        have h1 : C m₁ - C m₂ ≥ 1 := hgt
+        have : (m₁.val : ℤ) - m₂.val ≥ pLen := by nlinarith
+        linarith [Int.natCast_nonneg m₂.val]
+    have : (m₁.val : ℤ) = m₂.val := by
+      rw [hC_eq] at hdiff'; simp at hdiff'; linarith
+    exact Fin.ext (by exact_mod_cast this)
+
+  -- Step 3: Prefix at 0 is zero, prefix at pLen is pVec
+  have hprefix_0 : ∀ a : BinaryStep, (Necklace.kStepVector w' 0 0 a : ℤ) = 0 := by
+    intro a; unfold Necklace.kStepVector Necklace.slice
+    simp only [Nat.sub_zero, ZVector.ofList]
+    simp
+
+  -- Step 4: For i ∈ {0,...,pLen-1}, express kStepVector(w', i, k) using prefixes
+  -- kStepVector(w', i, k)(a) = prefix(i+k)(a) - prefix(i)(a)
+  -- Using prefix_mod_period:
+  --   prefix(m)(a) = prefix(m % pLen)(a) + (m / pLen) * pVec(a)
+  -- For i < pLen: prefix(i)(a) = prefix(i)(a) (no change)
+  -- For i+k: prefix(i+k)(a) = prefix((i+k) % pLen)(a) + ((i+k) / pLen) * pVec(a)
+
+  -- Express prefix(i)(a) for i ∈ {0,...,pLen-1} in terms of J and C:
+  -- prefix(0)(a) = 0
+  -- prefix(m+1)(a) = J(m) * g(a) + C(m) * pVec(a) for m : Fin pLen
+  -- So prefix(i)(a) = if i = 0 then 0 else J(i-1) * g(a) + C(i-1) * pVec(a)
+
+  -- Define J_ext and C_ext that work for i ∈ {0,...,pLen}:
+  -- J_ext(0) = 0, J_ext(m+1) = J(m) for m < pLen
+  -- C_ext(0) = 0, C_ext(m+1) = C(m)
+  -- Then prefix(i)(a) = J_ext(i) * g(a) + C_ext(i) * pVec(a) for i ∈ {0,...,pLen}
+
+  -- And by prefix_mod_period, for general m:
+  -- prefix(m)(a) = prefix(m % pLen)(a) + (m / pLen) * pVec(a)
+  --             = J_ext(m % pLen) * g(a) + (C_ext(m % pLen) + m / pLen) * pVec(a)
+
+  -- For i ∈ {0,...,pLen-1} (i.e. i : Fin pLen):
+  -- prefix(i)(a):
+  --   if i = 0: 0
+  --   else: J(⟨i-1, ...⟩) * g(a) + C(⟨i-1, ...⟩) * pVec(a)
+
+  -- kStepVector(w', i, k)(a) = prefix(i+k)(a) - prefix(i)(a)
+  -- prefix(i+k)(a) = prefix((i+k) % pLen)(a) + ((i+k) / pLen) * pVec(a)
+  -- Let r₂ = (i+k) % pLen, q₂ = (i+k) / pLen
+  -- prefix(r₂)(a) = if r₂ = 0 then 0 else J(r₂-1) * g(a) + C(r₂-1) * pVec(a)
+
+  -- Define Delta_j for position i: the difference in J-values
+  -- If i = 0 and r₂ = 0: Delta_j = 0 - 0 = 0
+  -- If i = 0 and r₂ > 0: Delta_j = J(r₂-1).val
+  -- If i > 0 and r₂ = 0: Delta_j = -J(i-1).val (since prefix(r₂) contributes 0)
+  -- Wait, we also need to handle the pVec terms. The key is that the full k-step vector
+  -- depends on Delta_j because the pVec coefficient is determined by the total-count constraint.
+
+  -- Let's just show each k-step vector equals mkVec(dj) for some dj.
+
+  -- For each position i : Fin pLen, show kStepVector w' i.val k = mkVec (dj_i)
+  -- where dj_i ∈ ℤ satisfies dj_i * k₀ ≡ k (mod pLen)
+
+  have hmkVec_claim : ∀ i : Fin pLen, ∃ dj : ℤ,
+      dj * k₀ % pLen = k % pLen ∧
+      -(pLen : ℤ) < dj ∧ dj < pLen ∧
+      ∀ a : BinaryStep, (Necklace.kStepVector w' i.val k a : ℤ) =
+        dj * g a + ((↑k - dj * ↑k₀) / ↑pLen) * pVec a := by
+    intro i
+    -- Express kStepVector(w', i, k)(a) = prefix(i+k)(a) - prefix(i)(a)
+    -- Using prefix_mod_period for prefix(i+k) and direct formula for prefix(i)
+    set ik := i.val + k
+    set r₂ := ik % pLen with hr₂_def
+    set q₂ := ik / pLen with hq₂_def
+    have hik_eq : ik = r₂ + q₂ * pLen := by
+      change ik = ik % pLen + ik / pLen * pLen
+      have := Nat.mod_add_div ik pLen  -- ik % pLen + pLen * (ik / pLen) = ik
+      rw [Nat.mul_comm] at this; exact this.symm
+    -- prefix(i+k)(a) = prefix(r₂)(a) + q₂ * pVec(a)
+    have hprefix_ik : ∀ a : BinaryStep, (Necklace.kStepVector w' 0 ik a : ℤ) =
+        Necklace.kStepVector w' 0 r₂ a + ↑q₂ * pVec a := by
+      intro a; exact prefix_mod_period_rotated w r ik a
+    -- Express prefix(r₂) and prefix(i) in terms of J and C
+    -- Case: i.val = 0
+    -- Case: i.val > 0
+    -- Case: r₂ = 0
+    -- Case: r₂ > 0
+    -- Unify using: prefix(m)(a) for m ∈ {0,...,pLen} equals
+    --   if m = 0 then 0 else J(m-1)*g(a) + C(m-1)*pVec(a)
+    have hprefix_at : ∀ (m : ℕ) (hm : m ≤ pLen) (a : BinaryStep),
+        (Necklace.kStepVector w' 0 m a : ℤ) =
+        (if h : m = 0 then 0
+         else ↑(J ⟨m - 1, by omega⟩).val * g a + C ⟨m - 1, by omega⟩ * pVec a) := by
+      intro m hm a
+      rcases Nat.eq_zero_or_pos m with rfl | hm_pos
+      · simp [hprefix_0 a]
+      · simp only [Nat.ne_of_gt hm_pos, ↓reduceDIte]
+        have hm_pred : m - 1 < pLen := by omega
+        have := hJC ⟨m - 1, hm_pred⟩ a
+        rwa [show m - 1 + 1 = m from by omega] at this
+    -- prefix(i)(a) for i : Fin pLen (i.val < pLen ≤ pLen)
+    have hprefix_i : ∀ a : BinaryStep, (Necklace.kStepVector w' 0 i.val a : ℤ) =
+        (if h : i.val = 0 then 0
+         else ↑(J ⟨i.val - 1, by omega⟩).val * g a + C ⟨i.val - 1, by omega⟩ * pVec a) := by
+      intro a; exact hprefix_at i.val (by omega) a
+    -- r₂ < pLen (since r₂ = ik % pLen)
+    have hr₂_lt : r₂ < pLen := Nat.mod_lt ik hpLen_pos
+    -- prefix(r₂)(a)
+    have hprefix_r₂ : ∀ a : BinaryStep, (Necklace.kStepVector w' 0 r₂ a : ℤ) =
+        (if h : r₂ = 0 then 0
+         else ↑(J ⟨r₂ - 1, by omega⟩).val * g a + C ⟨r₂ - 1, by omega⟩ * pVec a) := by
+      intro a; exact hprefix_at r₂ (by omega) a
+    -- Now compute kStepVector(w', i, k)(a) = prefix(ik)(a) - prefix(i)(a)
+    -- = (prefix(r₂)(a) + q₂ * pVec(a)) - prefix(i)(a)
+    -- Define the Delta_j for this position
+    -- If i = 0 and r₂ = 0: dj = 0 (but this means k ≡ 0 mod pLen, and prefix(k) = q₂*pVec)
+    -- If i = 0 and r₂ > 0: dj = J(r₂-1).val
+    -- If i > 0 and r₂ = 0: dj = -(J(i-1).val : ℤ)
+    -- If i > 0 and r₂ > 0: dj = J(r₂-1).val - J(i-1).val
+    set dj : ℤ :=
+      (if r₂ = 0 then 0 else ↑(J ⟨r₂ - 1, by omega⟩).val) -
+      (if i.val = 0 then 0 else ↑(J ⟨i.val - 1, by omega⟩).val)
+    refine ⟨dj, ?_, ?_, ?_, ?_⟩
+    · -- dj * k₀ ≡ k (mod pLen)
+      -- From total count: prefix(m)(L) + prefix(m)(s) = m
+      -- So for prefix(i): i = (J_ext(i) * k₀ + C_ext(i) * pLen) if i > 0, or 0 if i = 0
+      -- For prefix(ik): ik = prefix(r₂) total + q₂ * pLen
+      -- kStepVector total = k = ik - i = (prefix(r₂) total + q₂ * pLen) - prefix(i) total
+      -- prefix(r₂) total = if r₂ = 0 then 0 else J(r₂-1)*k₀ + C(r₂-1)*pLen
+      -- prefix(i) total = if i = 0 then 0 else J(i-1)*k₀ + C(i-1)*pLen
+      -- So k = dj * k₀ + (C_ext(r₂) - C_ext(i) + q₂) * pLen
+      -- => dj * k₀ ≡ k (mod pLen)
+      have htotal_i : (i.val : ℤ) =
+          (if i.val = 0 then 0 else ↑(J ⟨i.val - 1, by omega⟩).val * ↑k₀ +
+            C ⟨i.val - 1, by omega⟩ * ↑pLen) := by
+        rcases Nat.eq_zero_or_pos i.val with hi0 | hi_pos
+        · simp [hi0]
+        · simp only [Nat.ne_of_gt hi_pos]
+          have := hprefix_at i.val (by omega)
+          simp only [Nat.ne_of_gt hi_pos, ↓reduceDIte] at this
+          have hL := this BinaryStep.L
+          have hs := this BinaryStep.s
+          have hpfx_total : (Necklace.kStepVector w' 0 i.val BinaryStep.L : ℤ) +
+              Necklace.kStepVector w' 0 i.val BinaryStep.s = i.val := by
+            exact_mod_cast kStepVector_total_count w' 0 i.val
+          have hsum : (i.val : ℤ) = ↑(J ⟨i.val - 1, by omega⟩).val *
+              (g BinaryStep.L + g BinaryStep.s) +
+              C ⟨i.val - 1, by omega⟩ * (pVec BinaryStep.L + pVec BinaryStep.s) := by linarith
+          rw [hg_total, hpVec_total] at hsum; exact hsum
+      have htotal_r₂ : (r₂ : ℤ) =
+          (if r₂ = 0 then 0 else ↑(J ⟨r₂ - 1, by omega⟩).val * ↑k₀ +
+            C ⟨r₂ - 1, by omega⟩ * ↑pLen) := by
+        rcases Nat.eq_zero_or_pos r₂ with hr0 | hr_pos
+        · simp [hr0]
+        · simp only [Nat.ne_of_gt hr_pos]
+          have := hprefix_at r₂ (by omega)
+          simp only [Nat.ne_of_gt hr_pos, ↓reduceDIte] at this
+          have hL := this BinaryStep.L
+          have hs := this BinaryStep.s
+          have hpfx_total : (Necklace.kStepVector w' 0 r₂ BinaryStep.L : ℤ) +
+              Necklace.kStepVector w' 0 r₂ BinaryStep.s = r₂ := by
+            exact_mod_cast kStepVector_total_count w' 0 r₂
+          have hsum : (r₂ : ℤ) = ↑(J ⟨r₂ - 1, by omega⟩).val *
+              (g BinaryStep.L + g BinaryStep.s) +
+              C ⟨r₂ - 1, by omega⟩ * (pVec BinaryStep.L + pVec BinaryStep.s) := by linarith
+          rw [hg_total, hpVec_total] at hsum; exact hsum
+      -- k = ik - i = r₂ + q₂ * pLen - i
+      have hk_eq : (k : ℤ) = ↑r₂ + ↑q₂ * ↑pLen - ↑i.val := by
+        have : i.val + k = r₂ + q₂ * pLen := hik_eq
+        zify at this; linarith
+      -- k = dj * k₀ + Dc * pLen for some Dc
+      -- So dj * k₀ % pLen = k % pLen
+      set Dc₀ : ℤ := (if r₂ = 0 then 0 else C ⟨r₂ - 1, by omega⟩) -
+                      (if i.val = 0 then 0 else C ⟨i.val - 1, by omega⟩) + q₂
+      have hk_decomp : (k : ℤ) = dj * k₀ + Dc₀ * pLen := by
+        rw [hk_eq, htotal_r₂, htotal_i]
+        simp only [dj, Dc₀]; split_ifs <;> ring
+      have : dj * ↑k₀ % ↑pLen = ↑k % ↑pLen := by
+        conv_rhs => rw [hk_decomp]
+        rw [Int.add_mul_emod_self_right]
+      exact_mod_cast this
+    · -- -(pLen : ℤ) < dj
+      simp only [dj]
+      have hJ_bound : ∀ (m : Fin pLen), (0 : ℤ) ≤ (J m).val ∧ ((J m).val : ℤ) < pLen :=
+        fun m => ⟨Int.natCast_nonneg _, by exact_mod_cast (J m).isLt⟩
+      split_ifs with h1 h2
+      all_goals (try omega)
+    · -- dj < pLen
+      simp only [dj]
+      have hJ_bound : ∀ (m : Fin pLen), (0 : ℤ) ≤ (J m).val ∧ ((J m).val : ℤ) < pLen :=
+        fun m => ⟨Int.natCast_nonneg _, by exact_mod_cast (J m).isLt⟩
+      split_ifs with h1 h2
+      all_goals (try omega)
+    · -- kStepVector(w', i, k)(a) = dj * g(a) + ((k - dj * k₀) / pLen) * pVec(a)
+      intro a
+      have hkstep : (Necklace.kStepVector w' i.val k a : ℤ) =
+          Necklace.kStepVector w' 0 ik a - Necklace.kStepVector w' 0 i.val a := by
+        exact kStepVector_as_prefix_diff w' i.val k a
+      rw [hkstep, hprefix_ik a]
+      -- The LHS is: (prefix_r₂ + q₂ * pVec) - prefix_i
+      -- We need to show this equals dj * g(a) + ((k - dj * k₀) / pLen) * pVec(a)
+      -- We know k = dj * k₀ + Dc * pLen where Dc = C_ext(r₂) - C_ext(i) + q₂
+      -- And the expression is dj * g(a) + Dc * pVec(a)
+      -- We need (k - dj * k₀) / pLen = Dc
+      -- This follows from k = dj * k₀ + Dc * pLen and pLen > 0
+      set Dc : ℤ := (if r₂ = 0 then 0 else C ⟨r₂ - 1, by omega⟩) -
+                     (if i.val = 0 then 0 else C ⟨i.val - 1, by omega⟩) + q₂
+      -- Show the expression equals dj * g(a) + Dc * pVec(a)
+      suffices hsuff : (Necklace.kStepVector w' 0 r₂ a : ℤ) + ↑q₂ * pVec a -
+          Necklace.kStepVector w' 0 i.val a = dj * g a + Dc * pVec a by
+        rw [hsuff]
+        -- Now show Dc = (k - dj * k₀) / pLen
+        congr 1
+        -- We need (k - dj * k₀) / pLen = Dc, i.e., k - dj * k₀ = Dc * pLen
+        -- This follows from the total count equations
+        have htotal_i' : (i.val : ℤ) =
+            (if i.val = 0 then 0 else ↑(J ⟨i.val - 1, by omega⟩).val) * ↑k₀ +
+            (if i.val = 0 then 0 else C ⟨i.val - 1, by omega⟩) * ↑pLen := by
+          rcases Nat.eq_zero_or_pos i.val with hi0 | hi_pos
+          · simp [hi0]
+          · simp only [Nat.ne_of_gt hi_pos]
+            have := hprefix_at i.val (by omega)
+            simp only [Nat.ne_of_gt hi_pos, ↓reduceDIte] at this
+            have hL := this BinaryStep.L; have hs := this BinaryStep.s
+            have hpfx_total : (Necklace.kStepVector w' 0 i.val BinaryStep.L : ℤ) +
+                Necklace.kStepVector w' 0 i.val BinaryStep.s = i.val :=
+              by exact_mod_cast kStepVector_total_count w' 0 i.val
+            have hsum : (i.val : ℤ) = ↑(J ⟨i.val - 1, by omega⟩).val *
+                (g BinaryStep.L + g BinaryStep.s) +
+                C ⟨i.val - 1, by omega⟩ * (pVec BinaryStep.L + pVec BinaryStep.s) := by linarith
+            rw [hg_total, hpVec_total] at hsum; exact hsum
+        have htotal_r₂' : (r₂ : ℤ) =
+            (if r₂ = 0 then 0 else ↑(J ⟨r₂ - 1, by omega⟩).val) * ↑k₀ +
+            (if r₂ = 0 then 0 else C ⟨r₂ - 1, by omega⟩) * ↑pLen := by
+          rcases Nat.eq_zero_or_pos r₂ with hr0 | hr_pos
+          · simp [hr0]
+          · simp only [Nat.ne_of_gt hr_pos]
+            have := hprefix_at r₂ (by omega)
+            simp only [Nat.ne_of_gt hr_pos, ↓reduceDIte] at this
+            have hL := this BinaryStep.L; have hs := this BinaryStep.s
+            have hpfx_total : (Necklace.kStepVector w' 0 r₂ BinaryStep.L : ℤ) +
+                Necklace.kStepVector w' 0 r₂ BinaryStep.s = r₂ :=
+              by exact_mod_cast kStepVector_total_count w' 0 r₂
+            have hsum : (r₂ : ℤ) = ↑(J ⟨r₂ - 1, by omega⟩).val *
+                (g BinaryStep.L + g BinaryStep.s) +
+                C ⟨r₂ - 1, by omega⟩ * (pVec BinaryStep.L + pVec BinaryStep.s) := by linarith
+            rw [hg_total, hpVec_total] at hsum; exact hsum
+        have hk_eq' : (k : ℤ) = dj * k₀ + Dc * pLen := by
+          have : i.val + k = r₂ + q₂ * pLen := hik_eq
+          zify at this
+          have : (k : ℤ) = ↑r₂ + ↑q₂ * ↑pLen - ↑i.val := by linarith
+          rw [this, htotal_r₂', htotal_i']
+          simp only [dj, Dc]
+          split_ifs <;> ring
+        have : (↑k - dj * ↑k₀) = Dc * ↑pLen := by linarith
+        have hpLen_ne_zero : (pLen : ℤ) ≠ 0 := by exact_mod_cast hpLen_pos.ne'
+        rw [this, Int.mul_ediv_cancel _ hpLen_ne_zero]
+      -- Show: prefix(r₂) + q₂ * pVec - prefix(i) = dj * g + Dc * pVec
+      rw [hprefix_r₂ a, hprefix_i a]
+      simp only [dj, Dc]
+      split_ifs <;> ring
+
+  -- Step 5: All k-step vectors are determined by dj, and dj takes at most 2 values
+  -- All dj's are in the same residue class mod pLen and in (-(pLen), pLen).
+  -- In an interval of length < 2*pLen, a residue class mod pLen has at most 2 elements.
+
+  -- Collect the set of possible dj values
+  -- We show: the image set has at most 2 elements by showing all dj's are in {d₀, d₀ - pLen}
+  -- where d₀ is the unique element of {0,...,pLen-1} with d₀ * k₀ ≡ k (mod pLen).
+
+  -- Since mkVec is a function, at most 2 dj values => at most 2 k-step vectors.
+  -- More precisely: if all k-step vectors are of the form mkVec(dj) where dj ∈ S with |S| ≤ 2,
+  -- then the image has cardinality ≤ 2.
+
+  -- From hmkVec_claim, each k-step vector at position i equals mkVec(dj_i) for some dj_i.
+  -- All dj_i satisfy dj_i * k₀ ≡ k (mod pLen) and -(pLen) < dj_i < pLen.
+
+  -- A residue class mod pLen intersected with (-(pLen), pLen) has at most 2 elements.
+  -- Proof: if d₁, d₂, d₃ are in the same class and in (-(pLen), pLen), then
+  -- |d₁ - d₂| < 2*pLen and is a multiple of pLen, so d₁ - d₂ ∈ {-pLen, 0, pLen}.
+  -- Among 3 elements with pairwise differences in {-pLen, 0, pLen}, we'd need
+  -- d₁ < d₂ < d₃ with d₃ - d₁ = 2*pLen, but d₃ - d₁ < 2*pLen. Contradiction.
+
+  -- So the set of mkVec values has cardinality ≤ 2.
+
+  -- Show that any 3 elements in the image have a duplicate (pigeonhole)
+  by_contra hgt
+  push_neg at hgt
+  -- hgt : 2 < card
+  rw [Finset.two_lt_card] at hgt
+  obtain ⟨v₁, hv₁, v₂, hv₂, v₃, hv₃, h₁₂, h₁₃, h₂₃⟩ := hgt
+  rw [Finset.mem_image] at hv₁ hv₂ hv₃
+  obtain ⟨⟨i₁, hi₁⟩, _, rfl⟩ := hv₁
+  obtain ⟨⟨i₂, hi₂⟩, _, rfl⟩ := hv₂
+  obtain ⟨⟨i₃, hi₃⟩, _, rfl⟩ := hv₃
+  obtain ⟨dj₁, hmod₁, hlo₁, hhi₁, heq₁⟩ := hmkVec_claim ⟨i₁, hi₁⟩
+  obtain ⟨dj₂, hmod₂, hlo₂, hhi₂, heq₂⟩ := hmkVec_claim ⟨i₂, hi₂⟩
+  obtain ⟨dj₃, hmod₃, hlo₃, hhi₃, heq₃⟩ := hmkVec_claim ⟨i₃, hi₃⟩
+  -- All dj's differ by multiples of pLen (from coprimality)
+  have hcoprime_isCoprime : IsCoprime (↑pLen : ℤ) (↑k₀ : ℤ) := by
+    rw [Int.isCoprime_iff_nat_coprime, Int.natAbs_natCast, Int.natAbs_natCast]
+    exact hcoprime.symm
+  have hdvd_of_mod_eq : ∀ (a b : ℤ), a * ↑k₀ % ↑pLen = b * ↑k₀ % ↑pLen →
+      (↑pLen : ℤ) ∣ (a - b) := by
+    intro a b hab
+    have : (pLen : ℤ) ∣ (a - b) * k₀ := by
+      rw [Int.dvd_iff_emod_eq_zero,
+          show (a - b) * ↑k₀ = a * ↑k₀ - b * ↑k₀ from by ring,
+          Int.sub_emod, hab, Int.sub_self, Int.zero_emod]
+    exact hcoprime_isCoprime.dvd_of_dvd_mul_right this
+  have hdvd₁₂ : (pLen : ℤ) ∣ (dj₁ - dj₂) := hdvd_of_mod_eq _ _ (by rw [hmod₁, hmod₂])
+  have hdvd₁₃ : (pLen : ℤ) ∣ (dj₁ - dj₃) := hdvd_of_mod_eq _ _ (by rw [hmod₁, hmod₃])
+  have hdvd₂₃ : (pLen : ℤ) ∣ (dj₂ - dj₃) := hdvd_of_mod_eq _ _ (by rw [hmod₂, hmod₃])
+  -- All three dj's are in (-(pLen), pLen) with pairwise differences divisible by pLen.
+  -- By the helper lemma, at least two must be equal.
+  have hpLen_pos_int : (0 : ℤ) < pLen := by exact_mod_cast hpLen_pos
+  have hdj_two_eq := three_in_interval_two_equal (↑pLen) hpLen_pos_int
+    dj₁ dj₂ dj₃ hlo₁ hhi₁ hlo₂ hhi₂ hlo₃ hhi₃ hdvd₁₂ hdvd₁₃ hdvd₂₃
+  -- When dj_a = dj_b, the k-step vectors are equal since they're both mkVec(dj_a).
+  rcases hdj_two_eq with rfl | rfl | rfl
+  · exact absurd (show Necklace.kStepVector w' i₁ k = Necklace.kStepVector w' i₂ k from
+      by funext a; have := heq₁ a; have := heq₂ a; linarith) h₁₂
+  · exact absurd (show Necklace.kStepVector w' i₁ k = Necklace.kStepVector w' i₃ k from
+      by funext a; have := heq₁ a; have := heq₃ a; linarith) h₁₃
+  · exact absurd (show Necklace.kStepVector w' i₂ k = Necklace.kStepVector w' i₃ k from
+      by funext a; have := heq₂ a; have := heq₃ a; linarith) h₂₃
+
 /-- If g is a generator for a MOS scale w, then there exists some step size k such that
     g occurs at exactly (period length - 1) positions per period.
 
@@ -1740,7 +2838,7 @@ lemma Necklace.period_length_le_of_translational_period {n : ℕ} [NeZero n]
     6. One type (containing g) occurs p-1 times, the other occurs 1 time
     7. Since g is period-reduced, g is the majority vector -/
 theorem generator_implies_p_minus_one_occurrences [NeZero n]
-    (w : BinaryNecklace n) (hw : BinaryNecklace.isMOS w)
+    (w : BinaryNecklace n) (hw : BinaryNecklace.isBinary w)
     (g : ZVector BinaryStep) (hg : IsGenerator w g) :
     let p := (Necklace.period w).length
     ∃ k : ℕ, 0 < k ∧ k < p ∧ countKStepVectorPerPeriod w k g = p - 1 := by
@@ -1785,8 +2883,8 @@ theorem generator_implies_p_minus_one_occurrences [NeZero n]
       omega
 
   -- For a non-degenerate MOS, period length ≥ 2
-  -- isMOS includes isBinary, and a binary word (containing both L and s) has period ≥ 2
-  have hpLen_ge_2 : pLen ≥ 2 := period_length_ge_two_of_binary w hw.1
+  -- a binary word (containing both L and s) has period ≥ 2
+  have hpLen_ge_2 : pLen ≥ 2 := period_length_ge_two_of_binary w hw
 
   have hone_lt : (1 : ℕ) < pLen := by omega
 
@@ -2017,13 +3115,16 @@ theorem generator_implies_p_minus_one_occurrences [NeZero n]
       rw [List.mem_toFinset, List.mem_map]
       exact ⟨i₀.val, List.mem_range.mpr i₀.isLt, hg_appears⟩
 
-    -- 4b: There are at most 2 varieties (MOS property)
+    -- 4b: There are at most 2 varieties for k₀-steps
     have hk₀_lt_n : k₀ < n := by
       calc k₀ < pLen := hk₀_lt_pLen
         _ ≤ n := Necklace.period_length_le_n w
     have hpLen_le_n : pLen ≤ n := Necklace.period_length_le_n w
+    -- TODO: prove this in a different way without using MOS property
     have hcard_le_2 : (distinctKStepVectors w k₀).card ≤ 2 :=
-      mos_at_most_two_varieties w hw k₀ hk₀_pos hk₀_lt_pLen
+      gen_implies_at_most_two_varieties w hw g
+        ⟨⟨k₀, hk₀_lt_pLen, i₀, hg_appears⟩, r, hprefix_fwd, hprefix_bwd⟩
+        k₀ hk₀_pos hk₀_lt_n
 
     -- 4c: There are at least 2 varieties
     -- If only 1 variety, then all k₀-steps equal g, so w(i+k₀) = w(i) for all i.
@@ -2169,7 +3270,7 @@ theorem generator_implies_p_minus_one_occurrences [NeZero n]
       -- Both L and s appear in the period (from isBinary), so we can find positions where they occur
       intro a
       -- Get existence of the letter a in the period
-      have hbinary := hw.1
+      have hbinary := hw
       -- There exist positions in w with letter L and letter s
       obtain ⟨iL, hiL⟩ := hbinary.1
       obtain ⟨is, his⟩ := hbinary.2
@@ -2373,10 +3474,46 @@ theorem generator_implies_p_minus_one_occurrences [NeZero n]
         isUnit_of_dvd_one ⟨_, hprod.symm⟩
       rwa [Int.isUnit_iff] at hunit
 
-    -- Step 4f-iii: |g(L) - g'(L)| ≤ 1 (MOS property)
+    -- Step 4f-iii: |g(L) - g'(L)| ≤ 1
+    -- If the difference were > 1, the discrete IVT would give a third variety,
+    -- contradicting card = 2.
     have hdiff_le : (g BinaryStep.L : ℤ) - 1 ≤ g' BinaryStep.L ∧
-                     g' BinaryStep.L ≤ (g BinaryStep.L : ℤ) + 1 :=
-      mos_kStepVector_L_count_diff_le_one w hw k₀ hk₀_pos hk₀_lt_n g g' hg_mem hg'_mem
+                     g' BinaryStep.L ≤ (g BinaryStep.L : ℤ) + 1 := by
+      -- Extract a position where g' appears as a k₀-step vector
+      obtain ⟨jg', hjg'_lt, hjg'_eq⟩ : ∃ j < n, Necklace.kStepVector w j k₀ = g' := by
+        have h := hg'_mem
+        unfold distinctKStepVectors Necklace.allKStepVectors at h
+        rw [List.mem_toFinset, List.mem_map] at h
+        obtain ⟨j, hj, heq⟩ := h; exact ⟨j, List.mem_range.mp hj, heq⟩
+      by_contra hdiff_not
+      rw [not_and_or] at hdiff_not
+      simp only [not_le] at hdiff_not
+      have hdiff_gt : (Necklace.kStepVector w i₀.val k₀ BinaryStep.L : ℤ) -
+          Necklace.kStepVector w jg' k₀ BinaryStep.L > 1 ∨
+          (Necklace.kStepVector w jg' k₀ BinaryStep.L : ℤ) -
+          Necklace.kStepVector w i₀.val k₀ BinaryStep.L > 1 := by
+        rw [hg_appears, hjg'_eq]; rcases hdiff_not with h | h <;> [left; right] <;> omega
+      obtain ⟨m, hm_lt, hm_btw⟩ := kStepVector_intermediate_exists w k₀ i₀.val jg'
+        i₀.isLt hjg'_lt hdiff_gt
+      simp only at hm_btw
+      rw [hg_appears, hjg'_eq] at hm_btw
+      -- The vector at m must be g or g' (only 2 varieties exist)
+      have hm_mem : Necklace.kStepVector w m k₀ ∈ distinctKStepVectors w k₀ := by
+        unfold distinctKStepVectors Necklace.allKStepVectors
+        rw [List.mem_toFinset, List.mem_map]
+        exact ⟨m, List.mem_range.mpr hm_lt, rfl⟩
+      have hpair : ∀ v ∈ distinctKStepVectors w k₀, v = g ∨ v = g' := by
+        intro v hv; by_contra hnot; push_neg at hnot
+        have h3 : ({g, g', v} : Finset _).card = 3 := by
+          rw [Finset.card_insert_of_notMem (by simp [hg'_ne.symm, hnot.1.symm]),
+              Finset.card_insert_of_notMem (by simp [hnot.2.symm]),
+              Finset.card_singleton]
+        have h2 := (Finset.card_le_card (show ({g, g', v} : Finset _) ⊆ distinctKStepVectors w k₀
+          from by intro x hx; simp at hx; rcases hx with rfl | rfl | rfl <;> assumption)).trans_eq hcard_eq_2
+        omega
+      -- But its L-count is strictly between g(L) and g'(L), so it can't equal either
+      rcases hpair _ hm_mem with rfl | rfl <;>
+        simp only [min_lt_iff, lt_max_iff] at hm_btw <;> omega
     have hg'_ne_sym : g ≠ g' := hg'_ne.symm
     -- g ≠ g' with same total count and |L-diff| ≤ 1 means |L-diff| = 1
     have hg_total : g BinaryStep.L + g BinaryStep.s = k₀ := by
@@ -2712,208 +3849,10 @@ theorem generator_implies_p_minus_one_occurrences [NeZero n]
       have : (countKStepVectorPerPeriod w k₀ g' : ℤ) = 1 := by linarith
       omega
 
-/-- ofList distributes over list append -/
-private lemma ZVector_ofList_append [DecidableEq α] (l₁ l₂ : List α) (a : α) :
-    ZVector.ofList (l₁ ++ l₂) a = ZVector.ofList l₁ a + ZVector.ofList l₂ a := by
-  simp only [ZVector.ofList, List.filter_append, List.length_append, Nat.cast_add]
-
-/-- ofList of cons distributes as singleton + tail -/
-private lemma ZVector_ofList_cons [DecidableEq α] (x : α) (l : List α) (a : α) :
-    ZVector.ofList (x :: l) a = ZVector.ofList [x] a + ZVector.ofList l a := by
-  rw [show x :: l = [x] ++ l from rfl, ZVector_ofList_append]
-
-/-- The period of a necklace equals the slice from 0 to the period length -/
-private lemma period_eq_slice_zero [NeZero n] [DecidableEq α] (w : Necklace α n) :
-    Necklace.period w = Necklace.slice w 0 (Necklace.period w).length := by
-  have ⟨l, hl⟩ : ∃ l, Necklace.period w = Necklace.slice w 0 l := by
-    unfold Necklace.period
-    cases hfind : ((List.range n).tail.map (Necklace.slice w 0)).find?
-        (Necklace.isRepetitionOf w) with
-    | some pfx =>
-      simp only [Option.getD_some]
-      have hmem := List.mem_of_find?_eq_some hfind
-      rw [List.mem_map] at hmem
-      obtain ⟨l, _, rfl⟩ := hmem
-      exact ⟨l, rfl⟩
-    | none =>
-      simp only [Option.getD_none]
-      exact ⟨n, rfl⟩
-  have hlen : (Necklace.period w).length = l := by
-    rw [hl, Necklace.slice_length]; omega
-  rw [hlen]; exact hl
-
-/-- Period length is positive -/
-private lemma period_length_pos [NeZero n] [DecidableEq α] (w : Necklace α n) :
-    0 < (Necklace.period w).length := by
-  unfold Necklace.period
-  cases hfind : ((List.range n).tail.map (Necklace.slice w 0)).find?
-      (Necklace.isRepetitionOf w) with
-  | none =>
-    simp only [Option.getD_none]
-    rw [Necklace.slice_length]
-    exact NeZero.pos n
-  | some pfx =>
-    simp only [Option.getD_some]
-    have hmem := List.mem_of_find?_eq_some hfind
-    rw [List.mem_map] at hmem
-    obtain ⟨k', hk_mem, hk_eq⟩ := hmem
-    rw [← hk_eq, Necklace.slice_length]
-    simp only [List.tail_range, List.mem_range'] at hk_mem
-    omega
-
-/-- Letter count over any full-period-length segment equals the period vector.
-    This follows from pointwise periodicity: w(j) = w(j + pLen), so
-    "scooting" a window of length pLen doesn't change the letter counts. -/
-private lemma kStepVector_full_period [NeZero n] [DecidableEq α] (w : Necklace α n)
-    (m : ℕ) (a : α) :
-    Necklace.kStepVector w m (Necklace.period w).length a =
-    (ZVector.ofList (Necklace.period w)) a := by
-  set pLen := (Necklace.period w).length with hpLen_def
-  have hpLen_pos : 0 < pLen := period_length_pos w
-
-  -- Pointwise periodicity: w(j) = w(j % pLen) for all j
-  -- (copied from the proven pattern inside kStepVector_mod_period)
-  have hpLen_dvd_n : pLen ∣ n := by
-    have hRep : Necklace.isRepetitionOf w (Necklace.period w) = true := by
-      unfold Necklace.period
-      cases hfind : ((List.range n).tail.map (Necklace.slice w 0)).find?
-          (Necklace.isRepetitionOf w) with
-      | some pfx => simp only [Option.getD_some]; exact List.find?_some hfind
-      | none =>
-        simp only [Option.getD_none]
-        unfold Necklace.isRepetitionOf
-        simp only [Necklace.slice_length, Nat.sub_zero, ne_eq,
-          Nat.pos_iff_ne_zero.mp (NeZero.pos n), ↓reduceIte,
-          Nat.mod_self, not_true_eq_false]
-        rw [List.all_eq_true]
-        intro i hi
-        rw [List.mem_range] at hi
-        rw [decide_eq_true_eq, Nat.mod_eq_of_lt hi]
-        unfold Necklace.slice
-        simp only [bind_pure_comp, Functor.map, Nat.sub_zero, Nat.cast_zero, zero_add,
-              List.map_map, Function.comp, List.getElem?_map, List.getElem?_range hi,
-              Option.map]
-    unfold Necklace.isRepetitionOf at hRep
-    simp only [ne_eq] at hRep
-    split at hRep
-    · exact absurd hRep Bool.false_ne_true
-    · split at hRep
-      · exact absurd hRep Bool.false_ne_true
-      · rename_i _ h2
-        push_neg at h2
-        exact Nat.dvd_of_mod_eq_zero h2
-
-  have hperiodic : ∀ j : ℕ, w ((j : ℕ) : ZMod n) = w ((j % pLen : ℕ) : ZMod n) := by
-    intro j
-    have hj_mod_n := Nat.mod_lt j (NeZero.pos n)
-    have hj_mod_pLen := Nat.mod_lt j hpLen_pos
-    conv_lhs => rw [show ((j : ℕ) : ZMod n) = ((j % n : ℕ) : ZMod n) from by simp []]
-    have hRep : Necklace.isRepetitionOf w (Necklace.period w) = true := by
-      unfold Necklace.period
-      cases hfind : ((List.range n).tail.map (Necklace.slice w 0)).find?
-          (Necklace.isRepetitionOf w) with
-      | some pfx => simp only [Option.getD_some]; exact List.find?_some hfind
-      | none =>
-        simp only [Option.getD_none]
-        unfold Necklace.isRepetitionOf
-        simp only [Necklace.slice_length, Nat.sub_zero, ne_eq,
-          Nat.pos_iff_ne_zero.mp (NeZero.pos n), ↓reduceIte,
-          Nat.mod_self, not_true_eq_false]
-        rw [List.all_eq_true]
-        intro i hi
-        rw [List.mem_range] at hi
-        rw [decide_eq_true_eq, Nat.mod_eq_of_lt hi]
-        unfold Necklace.slice
-        simp only [bind_pure_comp, Functor.map, Nat.sub_zero, Nat.cast_zero, zero_add,
-              List.map_map, Function.comp, List.getElem?_map, List.getElem?_range hi,
-              Option.map]
-    have hperiod_match : ∀ i, i < n →
-        some (w ((i : ℕ) : ZMod n)) = (Necklace.period w)[i % pLen]? := by
-      intro i hi
-      unfold Necklace.isRepetitionOf at hRep
-      simp only [ne_eq] at hRep
-      split at hRep
-      · exact absurd hRep Bool.false_ne_true
-      · split at hRep
-        · exact absurd hRep Bool.false_ne_true
-        · rw [List.all_eq_true] at hRep
-          have := hRep i (List.mem_range.mpr hi)
-          rwa [decide_eq_true_eq] at this
-    have hperiod_is_slice : Necklace.period w = Necklace.slice w 0 pLen :=
-      period_eq_slice_zero w
-    have hperiod_elem : ∀ j, j < pLen →
-        (Necklace.period w)[j]? = some (w ((j : ℕ) : ZMod n)) := by
-      intro j hj
-      rw [hperiod_is_slice]
-      unfold Necklace.slice
-      simp only [bind_pure_comp, Functor.map, Nat.sub_zero, Nat.cast_zero, zero_add,
-            List.map_map, Function.comp, List.getElem?_map, List.getElem?_range hj,
-            Option.map]
-    have h1 := hperiod_match (j % n) hj_mod_n
-    rw [Nat.mod_mod_of_dvd j hpLen_dvd_n] at h1
-    have h2 := hperiod_elem (j % pLen) hj_mod_pLen
-    rw [h2] at h1
-    exact Option.some_injective _ h1
-
-  -- From hperiodic: w(j) = w(j + pLen) for all j
-  have hperiodic_shift : ∀ j : ℕ,
-      w ((j : ℕ) : ZMod n) = w (((j + pLen) : ℕ) : ZMod n) := by
-    intro j
-    rw [hperiodic j, hperiodic (j + pLen), Nat.add_mod_right]
-
-  -- Scoot: Necklace.kStepVector w m' pLen a = Necklace.kStepVector w (m'+1) pLen a
-  -- Removing the first element and adding the last doesn't change the count
-  -- because w(m') = w(m' + pLen) by periodicity.
-  have scoot : ∀ m', Necklace.kStepVector w m' pLen a = Necklace.kStepVector w (m' + 1) pLen a := by
-    intro m'
-    unfold Necklace.kStepVector
-    have h_lhs := slice_shift_decompose w m' pLen hpLen_pos
-    have h_rhs := slice_extend_end w (m' + 1) (pLen - 1)
-    rw [show (m' + 1) + (pLen - 1) + 1 = m' + 1 + pLen from by omega] at h_rhs
-    -- h_rhs may have ↑(m'+1) + ↑(pLen-1) in the ZMod cast for the last element;
-    -- we need to also normalize the slice bound
-    conv at h_rhs => rhs; rw [show (m' + 1) + (pLen - 1) = m' + pLen from by omega]
-    rw [h_lhs, h_rhs, ZVector_ofList_cons, ZVector_ofList_append, hperiodic_shift m']
-    -- The last element on RHS may still have the split cast ↑(m'+1) + ↑(pLen-1);
-    -- unify with ↑(m'+pLen) using Nat.cast_add
-    have hcast : (↑(m' + pLen) : ZMod n) = ↑(m' + 1) + ↑(pLen - 1) := by
-      rw [← Nat.cast_add]; congr 1; omega
-    rw [hcast]; ring
-
-  -- By induction: Necklace.kStepVector w m pLen a = Necklace.kStepVector w 0 pLen a
-  have h_eq_zero : Necklace.kStepVector w m pLen a = Necklace.kStepVector w 0 pLen a := by
-    induction m with
-    | zero => rfl
-    | succ m' ih => rw [← scoot m', ih]
-  -- Necklace.kStepVector w 0 pLen = pVec (since period = slice w 0 pLen)
-  rw [h_eq_zero]
-  unfold Necklace.kStepVector
-  congr 1
-  rw [show 0 + pLen = pLen from by omega]
-  exact (period_eq_slice_zero w).symm
-
-/-- Splitting a prefix: the prefix of length a+b equals the prefix of length a
-    plus the k-step vector starting at position a with length b -/
-private lemma kStepVector_prefix_add [NeZero n] [DecidableEq α]
-    (w : Necklace α n) (a b : ℕ) (c : α) :
-    Necklace.kStepVector w 0 (a + b) c = Necklace.kStepVector w 0 a c + Necklace.kStepVector w a b c := by
-  unfold Necklace.kStepVector
-  rw [← ZVector_ofList_append]
-  congr 1
-  -- slice w 0 (a + b) = slice w 0 a ++ slice w a (a + b)
-  unfold Necklace.slice
-  simp only [Nat.zero_add, Nat.add_sub_cancel_left, Nat.sub_zero,
-             bind_pure_comp, Functor.map, List.map_map]
-  rw [show a + b = a + b from rfl]
-  rw [List.range_add, List.map_append, List.map_map]
-  congr 1
-  ext i
-  simp [Function.comp]
-
 /-- Converse: If a k-step vector g occurs at exactly (period length - 1) positions
     per period in a MOS scale, then g is a generator. -/
 theorem p_minus_one_occurrences_implies_generator [NeZero n]
-    (w : BinaryNecklace n) (hw : BinaryNecklace.isMOS w)
+    (w : BinaryNecklace n) (hw : BinaryNecklace.isBinary w)
     (g : ZVector BinaryStep) (k : ℕ)
     (hk_pos : 0 < k) (hk_bound : k < (Necklace.period w).length)
     (hcount : countKStepVectorPerPeriod w k g = (Necklace.period w).length - 1) :
@@ -2926,7 +3865,7 @@ theorem p_minus_one_occurrences_implies_generator [NeZero n]
   -- Part 1: g appears as a k-step vector
   -- Since countKStepVectorPerPeriod = pLen - 1 ≥ 1, g occurs at least once
   have hpLen_pos : pLen > 0 := by
-    have : pLen ≥ 2 := period_length_ge_two_of_binary w hw.1
+    have : pLen ≥ 2 := period_length_ge_two_of_binary w hw
     omega
   have hcount_pos : countKStepVectorPerPeriod w k g ≥ 1 := by
     rw [hcount]; omega
@@ -2957,7 +3896,7 @@ theorem p_minus_one_occurrences_implies_generator [NeZero n]
     -- Strategy: stack g exactly (pLen-1) times, covering k*(pLen-1) letters
     have hcoprime : Nat.Coprime k pLen :=
       p_minus_one_occurrences_implies_coprime_to_period w hw k hk_pos hk_bound g hcount
-    have hpLen_ge_2 : pLen ≥ 2 := period_length_ge_two_of_binary w hw.1
+    have hpLen_ge_2 : pLen ≥ 2 := period_length_ge_two_of_binary w hw
     have hpLen_le_n : pLen ≤ n := Necklace.period_length_le_n w
 
     -- Find the unique imperfect position j₀
@@ -3191,7 +4130,7 @@ theorem p_minus_one_occurrences_implies_generator [NeZero n]
 /-- Characterization: In a MOS scale, g is a generator iff it occurs at exactly
     (period length - 1) positions for some step size k. -/
 theorem generator_iff_p_minus_one_occurrences [NeZero n]
-    (w : BinaryNecklace n) (hw : BinaryNecklace.isMOS w) (g : ZVector BinaryStep) :
+    (w : BinaryNecklace n) (hw : BinaryNecklace.isBinary w) (g : ZVector BinaryStep) :
     IsGenerator w g ↔
     (let p := (Necklace.period w).length
      ∃ k : ℕ, 0 < k ∧ k < p ∧ countKStepVectorPerPeriod w k g = p - 1) := by
@@ -5539,7 +6478,7 @@ lemma chunk_word_structure [NeZero n] (x : BinaryStep) (w : BinaryNecklace n)
         rw [hfirst_eq, getElem!_pos indexVals j' hj'_lt_iv, hj'_eq] at hiv0_le
         omega
 
-private lemma binary_count_L_plus_count_s (l : List BinaryStep) :
+lemma binary_count_L_plus_count_s (l : List BinaryStep) :
     l.count BinaryStep.L + l.count BinaryStep.s = l.length := by
   induction l with
   | nil => simp
@@ -5547,7 +6486,7 @@ private lemma binary_count_L_plus_count_s (l : List BinaryStep) :
     cases head <;> simp_all [] <;> omega
 
 /-- For binary step lists of the same length, equal L-count implies equal multisets. -/
-private lemma binary_multiset_eq_of_L_count_eq (l₁ l₂ : List BinaryStep)
+lemma binary_multiset_eq_of_L_count_eq (l₁ l₂ : List BinaryStep)
     (hlen : l₁.length = l₂.length)
     (hL : l₁.count BinaryStep.L = l₂.count BinaryStep.L) :
     (↑l₁ : Multiset BinaryStep) = ↑l₂ := by
@@ -5558,58 +6497,6 @@ private lemma binary_multiset_eq_of_L_count_eq (l₁ l₂ : List BinaryStep)
   | s =>
     have h₁ := binary_count_L_plus_count_s l₁
     have h₂ := binary_count_L_plus_count_s l₂
-    omega
-
-/-- Theorem: All MOS necklaces are balanced.
-    (Conceptually immediate from mos_kStepVector_L_count_diff_le_one)
--/
-theorem allMOSScalesAreBalanced : ∀ n : ℕ, [NeZero n] → (∀ w : BinaryNecklace n, (BinaryNecklace.isMOS w) → (Necklace.isBalanced w)) := by
-  intro n _inst w hw
-  -- Unfold isBalanced: for all k, w1, w2 in allKStepSubwords, count diff ≤ 1
-  unfold Necklace.isBalanced
-  intro k hk_pos hk_lt w1 w2 a hw1 hw2
-  -- Extract indices for w1 and w2
-  rw [Necklace.allKStepSubwords, List.mem_ofFn] at hw1 hw2
-  obtain ⟨i, hw1_eq⟩ := hw1
-  obtain ⟨j, hw2_eq⟩ := hw2
-  -- w1 = slice w i.val (i.val + k), w2 = slice w j.val (j.val + k)
-  subst hw1_eq hw2_eq
-  -- Get membership in distinctKStepVectors
-  have hv1_mem : Necklace.kStepVector w i.val k ∈ distinctKStepVectors w k := by
-    unfold distinctKStepVectors Necklace.allKStepVectors
-    rw [List.mem_toFinset, List.mem_map]
-    exact ⟨i.val, List.mem_range.mpr i.isLt, rfl⟩
-  have hv2_mem : Necklace.kStepVector w j.val k ∈ distinctKStepVectors w k := by
-    unfold distinctKStepVectors Necklace.allKStepVectors
-    rw [List.mem_toFinset, List.mem_map]
-    exact ⟨j.val, List.mem_range.mpr j.isLt, rfl⟩
-  -- L-count difference ≤ 1 for MOS
-  have hdiff := mos_kStepVector_L_count_diff_le_one w hw k hk_pos hk_lt
-                  (Necklace.kStepVector w i.val k) (Necklace.kStepVector w j.val k) hv1_mem hv2_mem
-  -- Unfold Necklace.kStepVector to relate to slice count
-  -- Necklace.kStepVector w i k = ZVector.ofList (slice w i (i+k))
-  -- ZVector.ofList l a = (l.filter (· == a)).length
-  unfold Necklace.kStepVector ZVector.ofList at hdiff
-  -- Both slices have same length k
-  have hlen1 : (Necklace.slice w i.val (i.val + k)).length = k := by
-    rw [Necklace.slice_length]; omega
-  have hlen2 : (Necklace.slice w j.val (j.val + k)).length = k := by
-    rw [Necklace.slice_length]; omega
-  cases a with
-  | L =>
-    -- Direct from hdiff: filter lengths differ by at most 1
-    simp only [List.count_eq_countP, List.countP_eq_length_filter]
-    -- hdiff gives bounds on the integer difference, convert to natAbs
-    have h1 := hdiff.1  -- slice_i_L - 1 ≤ slice_j_L
-    have h2 := hdiff.2  -- slice_j_L ≤ slice_i_L + 1
-    omega
-  | s =>
-    -- s-count = length - L-count, lengths are equal, so s-count diff equals L-count diff
-    have hfilt1 := binary_list_filter_sum (Necklace.slice w i.val (i.val + k))
-    have hfilt2 := binary_list_filter_sum (Necklace.slice w j.val (j.val + k))
-    simp only [List.count_eq_countP, List.countP_eq_length_filter]
-    have h1 := hdiff.1
-    have h2 := hdiff.2
     omega
 
 /-- Splitting a slice at an intermediate point -/
@@ -6175,8 +7062,6 @@ private lemma single_chunk_kStepVector [NeZero n] (x : BinaryStep) (w : BinaryNe
   -- Relate (toNecklace chunks)(j) to chunks[j]
   have hchunks_j : (Necklace.toNecklace chunks) (j : ZMod chunks.length) = chunks[j]'hic := by
     simp only [Necklace.toNecklace]
-    rw [getElem!_pos chunks ((j : ZMod chunks.length).val)
-        (by rwa [ZMod.val_natCast_of_lt (by omega)])]
     congr 1
     exact ZMod.val_natCast_of_lt (by omega)
   -- Apply chunk_binary_size_match
@@ -6517,7 +7402,6 @@ private lemma chunked_L_counts_two_valued (n : ℕ) [NeZero n] (w : BinaryNeckla
       intro p
       apply hall_mem
       simp only [Necklace.toNecklace]
-      rw [getElem!_pos chunks (ZMod.val p) (ZMod.val_lt p)]
       exact List.getElem_mem (ZMod.val_lt p)
     -- slice of constant-L necklace has count = length = k
     have hslice_all_L : ∀ y ∈ Necklace.slice (Necklace.toNecklace chunks) i (i + k),
@@ -6943,15 +7827,13 @@ theorem chunkSizesOfPrimMOSFormPrimMOS (n : ℕ) [NeZero n] (w : BinaryNecklace 
         · -- ∃ i, (toNecklace chunks) i = L
           obtain ⟨j, hj_lt, hjL⟩ := List.mem_iff_getElem.mp hL_mem
           exact ⟨(j : ZMod m), by
-            show chunks[((j : ℕ) : ZMod m).val]! = BinaryStep.L
-            rw [ZMod.val_natCast_of_lt (show j < m by omega)]
-            simp only [getElem!_pos, hj_lt, hjL]⟩
+            simp only [Necklace.toNecklace, ZMod.val_natCast_of_lt (show j < m by omega)]
+            exact hjL⟩
         · -- ∃ i, (toNecklace chunks) i = s
           obtain ⟨j, hj_lt, hjs⟩ := List.mem_iff_getElem.mp hs_mem
           exact ⟨(j : ZMod m), by
-            show chunks[((j : ℕ) : ZMod m).val]! = BinaryStep.s
-            rw [ZMod.val_natCast_of_lt (show j < m by omega)]
-            simp only [getElem!_pos, hj_lt, hjs]⟩
+            simp only [Necklace.toNecklace, ZMod.val_natCast_of_lt (show j < m by omega)]
+            exact hjs⟩
       · -- Not consecutive: none = some chunks, contradiction
         cases hchunks
     · -- Case _: catch-all, impossible given card = 2
@@ -7089,7 +7971,7 @@ lemma scoot_perfect_interval [NeZero n] (w : BinaryNecklace n)
 
 /-- If exactly one position in {0,...,n-1} has kStepVector ≠ g, then countKStepVectorPerPeriod = pLen - 1.
     This is a pure counting lemma: n - 1 out of n positions satisfy the predicate. -/
-private lemma countKStepVector_eq_of_unique_mismatch [NeZero n]
+lemma countKStepVector_eq_of_unique_mismatch [NeZero n]
     (w : BinaryNecklace n) (hprim : Necklace.isPrimitive w)
     (g : ZVector BinaryStep) (k : ℕ) (j₁ : ℕ) (hj₁_lt : j₁ < n)
     (hbad : Necklace.kStepVector w j₁ k ≠ g)
@@ -7140,7 +8022,7 @@ private lemma countKStepVector_eq_of_unique_mismatch [NeZero n]
       omega
 
 /-- For a primitive MOS necklace, the step counts are coprime. -/
-private lemma primitive_mos_coprime_counts [NeZero n]
+lemma primitive_mos_coprime_counts [NeZero n]
     (w : BinaryNecklace n) (hw : BinaryNecklace.isMOS w) (hprim : Necklace.isPrimitive w) :
     Nat.gcd (Necklace.count w BinaryStep.L) (Necklace.count w BinaryStep.s) = 1 := by
   by_contra h
@@ -7439,58 +8321,10 @@ private lemma countKStepVector_of_det [NeZero n]
     rw [hcg'_def] at hcg'_eq_one; exact_mod_cast hcg'_eq_one
   omega
 
-/-- A generator of a binary word cannot be the zero vector.
-    If g = 0, then all prefixes are multiples of the period vector p,
-    but prefix(1) has total count 1 while k·p has total count k·pLen ≠ 1 for pLen ≥ 2. -/
-lemma isGenerator_ne_zero [NeZero n] (w : BinaryNecklace n)
-    (hbin : BinaryNecklace.isBinary w) (g : ZVector BinaryStep)
-    (hg : IsGenerator w g) : g ≠ 0 := by
-  intro hg_zero
-  obtain ⟨_, r, hprefix_fwd, _⟩ := hg
-  let w' := fun i => w (i + r)
-  let per := Necklace.period w
-  let pLen := per.length
-  let pVec := ZVector.ofList per
-  have hpLen_ge_2 : pLen ≥ 2 := period_length_ge_two_of_binary w hbin
-  have hpLen_pos : 0 < pLen := by omega
-  obtain ⟨_, k₁, hpfx1⟩ := hprefix_fwd ⟨0, hpLen_pos⟩
-  have hpfx1_L : (Necklace.kStepVector w' 0 1) BinaryStep.L = k₁ * pVec BinaryStep.L := by
-    have := hpfx1 BinaryStep.L
-    simp only [hg_zero, ZVector.zero_apply, mul_zero, zero_add] at this
-    exact this
-  have hpfx1_s : (Necklace.kStepVector w' 0 1) BinaryStep.s = k₁ * pVec BinaryStep.s := by
-    have := hpfx1 BinaryStep.s
-    simp only [hg_zero, ZVector.zero_apply, mul_zero, zero_add] at this
-    exact this
-  have hpfx1_total : (Necklace.kStepVector w' 0 1) BinaryStep.L +
-      (Necklace.kStepVector w' 0 1) BinaryStep.s = 1 := by
-    unfold Necklace.kStepVector Necklace.slice
-    simp only [Nat.add_sub_cancel_left, List.range_one, ZVector.ofList]
-    cases hw'0 : w' 0 <;> simp [hw'0]
-  have hpVec_total : pVec BinaryStep.L + pVec BinaryStep.s = pLen := by
-    show (ZVector.ofList per) BinaryStep.L + (ZVector.ofList per) BinaryStep.s = pLen
-    unfold ZVector.ofList
-    have hsum := binaryStep_count_sum per
-    simp only [List.count_eq_countP, List.countP_eq_length_filter] at hsum
-    norm_cast
-  have hk1_pLen : k₁ * pLen = 1 := by
-    calc k₁ * pLen
-      = k₁ * (pVec BinaryStep.L + pVec BinaryStep.s) := by rw [hpVec_total]
-      _ = k₁ * pVec BinaryStep.L + k₁ * pVec BinaryStep.s := by ring
-      _ = (Necklace.kStepVector w' 0 1) BinaryStep.L +
-          (Necklace.kStepVector w' 0 1) BinaryStep.s := by rw [hpfx1_L, hpfx1_s]
-      _ = 1 := hpfx1_total
-  have hpLen_ge_2_int : (pLen : ℤ) ≥ 2 := Int.ofNat_le.mpr hpLen_ge_2
-  rcases Int.lt_or_le 0 k₁ with hk1_pos | hk1_le
-  · have : k₁ * pLen ≥ 1 * pLen := mul_le_mul_of_nonneg_right hk1_pos (Int.natCast_nonneg pLen)
-    simp only [one_mul] at this; omega
-  · have : k₁ * pLen ≤ 0 := mul_nonpos_of_nonpos_of_nonneg hk1_le (Int.natCast_nonneg pLen)
-    omega
-
 /-- For a primitive MOS necklace, any generator has |det| = 1 with respect to the letter counts.
     That is: |g(L) * count(w,s) - g(s) * count(w,L)| = 1. -/
-private lemma generator_det_abs_one [NeZero n] (w : BinaryNecklace n)
-    (hw : BinaryNecklace.isMOS w) (hprim : Necklace.isPrimitive w)
+lemma generator_det_abs_one [NeZero n] (w : BinaryNecklace n)
+    (hw : BinaryNecklace.isBinary w) (hprim : Necklace.isPrimitive w)
     (g : ZVector BinaryStep) (hgen : IsGenerator w g) :
     g BinaryStep.L * ↑(Necklace.count w BinaryStep.s) -
     g BinaryStep.s * ↑(Necklace.count w BinaryStep.L) = 1 ∨
@@ -7511,8 +8345,10 @@ private lemma generator_det_abs_one [NeZero n] (w : BinaryNecklace n)
         rw [List.mem_toFinset, List.mem_map]
         exact ⟨i, hi, heq⟩)
     omega
-  -- Step 3: Exactly 2 varieties (MOS ≤ 2, count < n means ≥ 2)
-  have hcard_le_2 := mos_at_most_two_varieties w hw k hk_pos (by rw [hprim]; exact hk_lt_pLen)
+  -- Step 3: Exactly 2 varieties for k-steps
+  -- TODO: prove this for k-steps without MOS property
+  have hcard_le_2 : (distinctKStepVectors w k).card ≤ 2 :=
+    gen_implies_at_most_two_varieties w hw g hgen k hk_pos hk_lt_pLen
   have hcard_ge_2 : (distinctKStepVectors w k).card ≥ 2 := by
     by_contra h_lt; push_neg at h_lt
     have hcard_eq_1 : (distinctKStepVectors w k).card = 1 := by
@@ -7617,7 +8453,34 @@ private lemma generator_det_abs_one [NeZero n] (w : BinaryNecklace n)
     obtain ⟨i, _, hg_eq⟩ := hg_list
     rw [← hg_eq]; exact_mod_cast kStepVector_total_count w i k
   -- Step 9: |g'(L) - g(L)| ≤ 1 and g'(L) ≠ g(L)
-  have hdiff := mos_kStepVector_L_count_diff_le_one w hw k hk_pos hk_lt_pLen g g' hg_mem hg'_mem
+  have hdiff : g BinaryStep.L - 1 ≤ g' BinaryStep.L ∧ g' BinaryStep.L ≤ g BinaryStep.L + 1 := by
+    -- Extract positions where g and g' appear
+    obtain ⟨ig, hig_lt, hig_eq⟩ : ∃ i < n, Necklace.kStepVector w i k = g := by
+      have h := hg_mem
+      unfold distinctKStepVectors Necklace.allKStepVectors at h
+      rw [List.mem_toFinset, List.mem_map] at h
+      obtain ⟨i, hi, heq⟩ := h; exact ⟨i, List.mem_range.mp hi, heq⟩
+    obtain ⟨jg', hjg'_lt, hjg'_eq⟩ : ∃ j < n, Necklace.kStepVector w j k = g' := by
+      have h := hg'_mem
+      unfold distinctKStepVectors Necklace.allKStepVectors at h
+      rw [List.mem_toFinset, List.mem_map] at h
+      obtain ⟨j, hj, heq⟩ := h; exact ⟨j, List.mem_range.mp hj, heq⟩
+    -- If |g(L) - g'(L)| > 1, IVT gives a third variety, contradicting card = 2
+    by_contra hdiff_not
+    rw [not_and_or] at hdiff_not
+    simp only [not_le] at hdiff_not
+    have hdiff_gt : (Necklace.kStepVector w ig k BinaryStep.L : ℤ) -
+        Necklace.kStepVector w jg' k BinaryStep.L > 1 ∨
+        (Necklace.kStepVector w jg' k BinaryStep.L : ℤ) -
+        Necklace.kStepVector w ig k BinaryStep.L > 1 := by
+      rw [hig_eq, hjg'_eq]; rcases hdiff_not with h | h <;> [left; right] <;> omega
+    obtain ⟨m, hm_lt, hm_btw⟩ := kStepVector_intermediate_exists w k ig jg'
+      hig_lt hjg'_lt hdiff_gt
+    simp only at hm_btw
+    rw [hig_eq, hjg'_eq] at hm_btw
+    -- The vector at m must be g or g', but its L-count is strictly between
+    rcases hmem_pair m hm_lt with heq | heq <;>
+      (rw [heq] at hm_btw; simp only [min_lt_iff, lt_max_iff] at hm_btw; omega)
   have hL_ne : g BinaryStep.L ≠ g' BinaryStep.L := by
     intro heq
     have hg'_total : g' BinaryStep.L + g' BinaryStep.s = ↑k := by
@@ -7672,13 +8535,10 @@ private lemma list_count_eq_necklace_count (l : List BinaryStep)
   | hd :: tl, _ =>
     simp only [Necklace.count, Necklace.toNecklace, List.length_cons]
     -- Now ZMod (tl.length + 1) = Fin (tl.length + 1) definitionally
-    -- Define f using getElem! to match the goal term
-    set f : Fin (tl.length + 1) → BinaryStep := fun i => (hd :: tl)[i.val]!
+    set f : Fin (tl.length + 1) → BinaryStep := fun i => (hd :: tl)[i.val]'(i.isLt)
     -- Key: Multiset.map f Finset.univ.val = ↑(hd :: tl) via Fin.univ_val_map
     have hmap : Multiset.map f Finset.univ.val = ↑(hd :: tl) := by
-      have hf_eq : f = fun i => (hd :: tl)[i.val]'(i.isLt) :=
-        funext fun i => getElem!_pos (hd :: tl) i.val i.isLt
-      rw [hf_eq, Fin.univ_val_map]
+      rw [Fin.univ_val_map]
       exact congrArg _ (List.ofFn_getElem (hd :: tl))
     rw [← Multiset.coe_count, ← hmap, Multiset.count_map]
     change Finset.card (Finset.filter (fun i => a = f i) Finset.univ) =
@@ -7818,7 +8678,6 @@ private lemma det_liftGeneratorVectorX [NeZero n] (x : BinaryStep)
     have hj_L : (Necklace.toNecklace chunks) j = BinaryStep.L := by
       apply hall_L
       simp only [Necklace.toNecklace]
-      rw [getElem!_pos chunks j.val (ZMod.val_lt j)]
       exact List.getElem_mem (ZMod.val_lt j)
     rw [hj_L] at hjs; exact BinaryStep.noConfusion hjs
   -- large = small + 1
@@ -7905,10 +8764,10 @@ theorem generator_reflects_under_expansion_L (n : ℕ) [NeZero n] (w : BinaryNec
     (hw_chunked : haveI : NeZero chunks.length := ⟨hlen⟩;
                   BinaryNecklace.isMOS (Necklace.toNecklace chunks))
     (hgenChunked : haveI : NeZero chunks.length := ⟨hlen⟩;
-                   HasGenerator (Necklace.toNecklace chunks))
+                   hasGenerator (Necklace.toNecklace chunks))
     (hprim_chunked : haveI : NeZero chunks.length := ⟨hlen⟩;
                      Necklace.isPrimitive (Necklace.toNecklace chunks)) :
-    HasGenerator w := by
+    hasGenerator w := by
   haveI : NeZero chunks.length := ⟨hlen⟩
 
   -- Step 1: Extract the generator from the chunked word
@@ -7949,7 +8808,7 @@ theorem generator_reflects_under_expansion_L (n : ℕ) [NeZero n] (w : BinaryNec
         rfl)
     · -- Main case: kChunked > 0
       have hkChunked_pos : 0 < kChunked := Nat.pos_of_ne_zero hk0
-      apply p_minus_one_occurrences_implies_generator w hw gLifted
+      apply p_minus_one_occurrences_implies_generator w hw.1 gLifted
         (liftedKStepSize chunkSizes iChunked.val kChunked)
       · -- 0 < kLifted
         exact liftedKStepSize_pos chunkSizes iChunked.val kChunked hkChunked_pos hwrap
@@ -7985,7 +8844,7 @@ theorem generator_reflects_under_expansion_L (n : ℕ) [NeZero n] (w : BinaryNec
             gLifted BinaryStep.L * ↑(Necklace.count w BinaryStep.s) -
             gLifted BinaryStep.s * ↑(Necklace.count w BinaryStep.L) = -1 := by
           have hdet_chunked := generator_det_abs_one (Necklace.toNecklace chunks)
-            hw_chunked hprim_chunked gChunked ⟨⟨kChunked, hkChunked_lt, iChunked, hgChunked_appears⟩, hgenChunked_rot⟩
+            hw_chunked.1 hprim_chunked gChunked ⟨⟨kChunked, hkChunked_lt, iChunked, hgChunked_appears⟩, hgenChunked_rot⟩
           have hdet_lift := det_liftGeneratorVectorX x w chunks chunkSizes hchunks hsizes
             hlen hw_chunked gChunked hprim
           rcases hdet_lift with hpos | hneg <;> rcases hdet_chunked with hc1 | hcn1
@@ -7997,7 +8856,7 @@ theorem generator_reflects_under_expansion_L (n : ℕ) [NeZero n] (w : BinaryNec
   · -- Wrapping case (iChunked + kChunked > chunkSizes.length)
     push_neg at hwrap
     have hkChunked_pos : 0 < kChunked := by omega
-    apply p_minus_one_occurrences_implies_generator w hw gLifted
+    apply p_minus_one_occurrences_implies_generator w hw.1 gLifted
       ((n - chunkBoundaryAt chunkSizes iChunked.val) +
        chunkBoundaryAt chunkSizes (iChunked.val + kChunked - chunkSizes.length))
     · -- 0 < kLifted
@@ -8047,7 +8906,7 @@ theorem generator_reflects_under_expansion_L (n : ℕ) [NeZero n] (w : BinaryNec
           gLifted BinaryStep.L * ↑(Necklace.count w BinaryStep.s) -
           gLifted BinaryStep.s * ↑(Necklace.count w BinaryStep.L) = -1 := by
         have hdet_chunked := generator_det_abs_one (Necklace.toNecklace chunks)
-          hw_chunked hprim_chunked gChunked ⟨⟨kChunked, hkChunked_lt, iChunked, hgChunked_appears⟩, hgenChunked_rot⟩
+          hw_chunked.1 hprim_chunked gChunked ⟨⟨kChunked, hkChunked_lt, iChunked, hgChunked_appears⟩, hgenChunked_rot⟩
         have hdet_lift := det_liftGeneratorVectorX x w chunks chunkSizes hchunks hsizes
           hlen hw_chunked gChunked hprim
         rcases hdet_lift with hpos | hneg <;> rcases hdet_chunked with hc1 | hcn1
@@ -8070,10 +8929,10 @@ theorem generator_reflects_under_expansion_s (n : ℕ) [NeZero n] (w : BinaryNec
     (hw_chunked : haveI : NeZero chunks.length := ⟨hlen⟩;
                   BinaryNecklace.isMOS (Necklace.toNecklace chunks))
     (hgenChunked : haveI : NeZero chunks.length := ⟨hlen⟩;
-                   HasGenerator (Necklace.toNecklace chunks))
+                   hasGenerator (Necklace.toNecklace chunks))
     (hprim_chunked : haveI : NeZero chunks.length := ⟨hlen⟩;
                      Necklace.isPrimitive (Necklace.toNecklace chunks)) :
-    HasGenerator w := by
+    hasGenerator w := by
   haveI : NeZero chunks.length := ⟨hlen⟩
   obtain ⟨gChunked, hgenChunked'⟩ := hgenChunked
   have hgChunked_ne_zero := isGenerator_ne_zero _ hw_chunked.1 gChunked hgenChunked'
@@ -8097,7 +8956,7 @@ theorem generator_reflects_under_expansion_s (n : ℕ) [NeZero n] (w : BinaryNec
         simp only [Nat.add_zero, Nat.sub_self, List.range_zero]
         rfl)
     · have hkChunked_pos : 0 < kChunked := Nat.pos_of_ne_zero hk0
-      apply p_minus_one_occurrences_implies_generator w hw gLifted
+      apply p_minus_one_occurrences_implies_generator w hw.1 gLifted
         (liftedKStepSize chunkSizes iChunked.val kChunked)
       · exact liftedKStepSize_pos chunkSizes iChunked.val kChunked hkChunked_pos hwrap
       · rw [hprim]
@@ -8129,7 +8988,7 @@ theorem generator_reflects_under_expansion_s (n : ℕ) [NeZero n] (w : BinaryNec
             gLifted BinaryStep.L * ↑(Necklace.count w BinaryStep.s) -
             gLifted BinaryStep.s * ↑(Necklace.count w BinaryStep.L) = -1 := by
           have hdet_chunked := generator_det_abs_one (Necklace.toNecklace chunks)
-            hw_chunked hprim_chunked gChunked ⟨⟨kChunked, hkChunked_lt, iChunked, hgChunked_appears⟩, hgenChunked_rot⟩
+            hw_chunked.1 hprim_chunked gChunked ⟨⟨kChunked, hkChunked_lt, iChunked, hgChunked_appears⟩, hgenChunked_rot⟩
           have hdet_lift := det_liftGeneratorVectorX x w chunks chunkSizes hchunks hsizes
             hlen hw_chunked gChunked hprim
           rcases hdet_lift with hpos | hneg <;> rcases hdet_chunked with hc1 | hcn1
@@ -8140,7 +8999,7 @@ theorem generator_reflects_under_expansion_s (n : ℕ) [NeZero n] (w : BinaryNec
         exact countKStepVector_of_det w hw hprim gLifted _ hkLifted_pos hkLifted_lt hg_mem hdet
   · push_neg at hwrap
     have hkChunked_pos : 0 < kChunked := by omega
-    apply p_minus_one_occurrences_implies_generator w hw gLifted
+    apply p_minus_one_occurrences_implies_generator w hw.1 gLifted
       ((n - chunkBoundaryAt chunkSizes iChunked.val) +
        chunkBoundaryAt chunkSizes (iChunked.val + kChunked - chunkSizes.length))
     · have hBi_lt_n : chunkBoundaryAt chunkSizes iChunked.val < n := by
@@ -8187,7 +9046,7 @@ theorem generator_reflects_under_expansion_s (n : ℕ) [NeZero n] (w : BinaryNec
           gLifted BinaryStep.L * ↑(Necklace.count w BinaryStep.s) -
           gLifted BinaryStep.s * ↑(Necklace.count w BinaryStep.L) = -1 := by
         have hdet_chunked := generator_det_abs_one (Necklace.toNecklace chunks)
-          hw_chunked hprim_chunked gChunked ⟨⟨kChunked, hkChunked_lt, iChunked, hgChunked_appears⟩, hgenChunked_rot⟩
+          hw_chunked.1 hprim_chunked gChunked ⟨⟨kChunked, hkChunked_lt, iChunked, hgChunked_appears⟩, hgenChunked_rot⟩
         have hdet_lift := det_liftGeneratorVectorX x w chunks chunkSizes hchunks hsizes
           hlen hw_chunked gChunked hprim
         rcases hdet_lift with hpos | hneg <;> rcases hdet_chunked with hc1 | hcn1
@@ -8594,7 +9453,7 @@ private lemma kStepVector_alls_prefix [NeZero n] (w : BinaryNecklace n) (m : ℕ
       linarith
 
 /-- The kStepVector over the full necklace counts each letter -/
-private lemma kStepVector_zero_n_eq_count [NeZero n] (w : BinaryNecklace n) (a : BinaryStep) :
+lemma kStepVector_zero_n_eq_count [NeZero n] (w : BinaryNecklace n) (a : BinaryStep) :
     Necklace.kStepVector w 0 n a = ↑(Necklace.count w a) := by
   -- Step 1: Convert kStepVector to explicit List sum
   have h_as_sum : Necklace.kStepVector w 0 n a =
@@ -8626,7 +9485,7 @@ private lemma kStepVector_zero_n_eq_count [NeZero n] (w : BinaryNecklace n) (a :
       by rw [ZMod.natCast_zmod_val]; exact hj⟩, ZMod.natCast_zmod_val j⟩
 
 /-- For a primitive necklace, the period vector equals the letter count -/
-private lemma period_vector_eq_count [NeZero n] (w : BinaryNecklace n)
+lemma period_vector_eq_count [NeZero n] (w : BinaryNecklace n)
     (hprim : Necklace.isPrimitive w) (a : BinaryStep) :
     (ZVector.ofList (Necklace.period w)) a = ↑(Necklace.count w a) := by
   have hperiod_eq : Necklace.period w = Necklace.slice w 0 n := by
@@ -8641,7 +9500,7 @@ private lemma period_vector_eq_count [NeZero n] (w : BinaryNecklace n)
     (Chunking by L gives a one-letter necklace, so we've hit the base case.) -/
 lemma mos_nL1s_has_generator (n : ℕ) [NeZero n] (w : BinaryNecklace n)
     (hw : BinaryNecklace.isMOS w)
-    (hone_s : Necklace.count w BinaryStep.s = 1) : HasGenerator w := by
+    (hone_s : Necklace.count w BinaryStep.s = 1) : hasGenerator w := by
   -- When there's exactly 1 s, the scale has generator g = {1L, 0s}
   -- The word has (n-1) L's and 1 s.
   -- Define g = {1L, 0s}
@@ -8664,7 +9523,7 @@ lemma mos_nL1s_has_generator (n : ℕ) [NeZero n] (w : BinaryNecklace n)
   · -- g appears as some k-step vector (at k=1, at any L position)
     use 1
     constructor
-    · -- 1 < pLen: the period length is at least 2 for a binary MOS
+    · -- 1 < pLen: the period length is at least 2 for a binary necklace
       exact period_length_ge_two_of_binary w hw.1
     -- Since count s = 1 and n ≥ 1, there must be an L (unless n = 1)
     by_cases hn : n = 1
@@ -8672,7 +9531,7 @@ lemma mos_nL1s_has_generator (n : ℕ) [NeZero n] (w : BinaryNecklace n)
       subst hn
       use ⟨0, by omega⟩
       exfalso
-      -- isMOS implies isBinary, which requires both L and s to exist
+      -- isBinary requires both L and s to exist
       have hbin := hw.1
       obtain ⟨iL, hiL⟩ := hbin.1
       obtain ⟨is, his⟩ := hbin.2
@@ -8861,7 +9720,7 @@ lemma mos_nL1s_has_generator (n : ℕ) [NeZero n] (w : BinaryNecklace n)
     (Symmetric to nL1s.) -/
 lemma mos_1Lns_has_generator (n : ℕ) [NeZero n] (w : BinaryNecklace n)
     (hw : BinaryNecklace.isMOS w)
-    (hone_L : Necklace.count w BinaryStep.L = 1) : HasGenerator w := by
+    (hone_L : Necklace.count w BinaryStep.L = 1) : hasGenerator w := by
   -- When there's exactly 1 L, the scale has generator g = {0L, 1s}
   -- Symmetric to mos_nL1s_has_generator with L↔s
   let g : ZVector BinaryStep := fun a => if a = BinaryStep.s then 1 else 0
@@ -9159,41 +10018,9 @@ lemma numChunks_lt_length (n : ℕ) [NeZero n] (w : BinaryNecklace n)
       exact nomatch h
   exact hlt
 
-/-- The period length divides n. Extracted from the proof of kStepVector_mod_period. -/
-private lemma period_dvd_length [NeZero n] [DecidableEq α] (w : Necklace α n) :
-    (Necklace.period w).length ∣ n := by
-  have hRep : Necklace.isRepetitionOf w (Necklace.period w) = true := by
-    unfold Necklace.period
-    cases hfind : ((List.range n).tail.map (Necklace.slice w 0)).find?
-        (Necklace.isRepetitionOf w) with
-    | some pfx => simp only [Option.getD_some]; exact List.find?_some hfind
-    | none =>
-      simp only [Option.getD_none]
-      unfold Necklace.isRepetitionOf
-      simp only [Necklace.slice_length, Nat.sub_zero, ne_eq,
-        Nat.pos_iff_ne_zero.mp (NeZero.pos n), ↓reduceIte,
-        Nat.mod_self, not_true_eq_false]
-      rw [List.all_eq_true]
-      intro i hi
-      rw [List.mem_range] at hi
-      rw [decide_eq_true_eq, Nat.mod_eq_of_lt hi]
-      unfold Necklace.slice
-      simp only [bind_pure_comp, Functor.map, Nat.sub_zero, Nat.cast_zero, zero_add,
-            List.map_map, Function.comp, List.getElem?_map, List.getElem?_range hi,
-            Option.map]
-  unfold Necklace.isRepetitionOf at hRep
-  simp only [ne_eq] at hRep
-  split at hRep
-  · exact absurd hRep Bool.false_ne_true
-  · split at hRep
-    · exact absurd hRep Bool.false_ne_true
-    · rename_i _ h2
-      push_neg at h2
-      exact Nat.dvd_of_mod_eq_zero h2
-
 /-- Pointwise periodicity: w(j) = w(j % pLen) for all j.
     Extracted from the proof of kStepVector_mod_period. -/
-private lemma period_pointwise [NeZero n] [DecidableEq α] (w : Necklace α n) (j : ℕ) :
+lemma period_pointwise [NeZero n] [DecidableEq α] (w : Necklace α n) (j : ℕ) :
     w ((j : ℕ) : ZMod n) = w ((j % (Necklace.period w).length : ℕ) : ZMod n) := by
   set pLen := (Necklace.period w).length with hpLen_def
   have hpLen_pos : 0 < pLen := period_length_pos w
@@ -9258,8 +10085,8 @@ private lemma hasGenerator_of_nonprimitive_mos (n : ℕ) [NeZero n]
     (w : BinaryNecklace n) (hw : BinaryNecklace.isMOS w)
     (h_not_prim : ¬ Necklace.isPrimitive w)
     (ih : ∀ (m : ℕ), m < n → ∀ [NeZero m],
-      ∀ (w : BinaryNecklace m), BinaryNecklace.isMOS w → HasGenerator w) :
-    HasGenerator w := by
+      ∀ (w : BinaryNecklace m), BinaryNecklace.isMOS w → hasGenerator w) :
+    hasGenerator w := by
   -- Period length properties
   set pLen := (Necklace.period w).length with hpLen_def
   have hpLen_pos : 0 < pLen := period_length_pos w
@@ -9449,7 +10276,7 @@ The proof is by strong induction on n:
   the generator of the period lifts to a generator of the whole word.
 -/
 theorem allMOSScalesHaveGenerator : ∀ n : ℕ, [NeZero n] →
-    (∀ w : BinaryNecklace n, (BinaryNecklace.isMOS w) → (HasGenerator w)) := by
+    (∀ w : BinaryNecklace n, (BinaryNecklace.isMOS w) → (hasGenerator w)) := by
   intro n
   -- Strong induction on n
   induction n using Nat.strong_induction_on with
@@ -9477,7 +10304,7 @@ theorem allMOSScalesHaveGenerator : ∀ n : ℕ, [NeZero n] →
             Finset.one_le_card.mpr ⟨i, Finset.mem_filter.mpr ⟨Finset.mem_univ _, hi⟩⟩
           omega
         -- Handle primitive vs non-primitive
-        suffices hprim_case : Necklace.isPrimitive w → HasGenerator w by
+        suffices hprim_case : Necklace.isPrimitive w → hasGenerator w by
           by_cases hprim : Necklace.isPrimitive w
           · exact hprim_case hprim
           · exact hasGenerator_of_nonprimitive_mos n w hw hprim ih
@@ -9566,7 +10393,7 @@ theorem allMOSScalesHaveGenerator : ∀ n : ℕ, [NeZero n] →
               have hw_chunked : BinaryNecklace.isMOS (Necklace.toNecklace chunks) := by
                 exact chunkSizesOfPrimMOSFormPrimMOS n w hw hprim x chunks
                   hbinary_chunks hlen hcountL_gt hcountS_gt
-              have hgen_chunked : HasGenerator (Necklace.toNecklace chunks) := by
+              have hgen_chunked : hasGenerator (Necklace.toNecklace chunks) := by
                 have := ih chunks.length hlt
                 exact this (Necklace.toNecklace chunks) hw_chunked
               have hsizes : chunkSizesList x w = some sizes := hchunks
@@ -9653,7 +10480,7 @@ theorem allMOSScalesHaveGenerator : ∀ n : ℕ, [NeZero n] →
               have hw_chunked : BinaryNecklace.isMOS (Necklace.toNecklace chunks) := by
                 exact chunkSizesOfPrimMOSFormPrimMOS n w hw hprim x chunks
                   hbinary_chunks hlen hcountS_gt hcountL_gt
-              have hgen_chunked : HasGenerator (Necklace.toNecklace chunks) := by
+              have hgen_chunked : hasGenerator (Necklace.toNecklace chunks) := by
                 have := ih chunks.length hlt
                 exact this (Necklace.toNecklace chunks) hw_chunked
               have hsizes : chunkSizesList x w = some sizes := hchunks
@@ -9661,3 +10488,15 @@ theorem allMOSScalesHaveGenerator : ∀ n : ℕ, [NeZero n] →
                 chunk_primitivity x w hw hprim sizes hsizes chunks hbinary_chunks hlen
               exact generator_reflects_under_expansion_s n w hw hprim x chunks sizes
                 hbinary_chunks hsizes hlen hL hw_chunked hgen_chunked hprim_chunked
+
+/-- Theorem (converse of allMOSScalesHaveGenerator):
+    A binary necklace that has a generator is MOS. -/
+theorem generatorImpliesMOS (n : ℕ) [NeZero n] (w : BinaryNecklace n)
+    (hbin : BinaryNecklace.isBinary w) (hgen : hasGenerator w)
+    : (BinaryNecklace.isMOS w) := by
+  constructor
+  · exact hbin
+  · intro k hk_pos hk_lt
+    rw [← distinctKStepVectors_card_eq]
+    obtain ⟨g, hg⟩ := hgen
+    exact gen_implies_at_most_two_varieties w hbin g hg k hk_pos hk_lt

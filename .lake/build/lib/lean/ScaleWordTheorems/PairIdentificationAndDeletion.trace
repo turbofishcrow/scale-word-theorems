@@ -1,8 +1,8 @@
 {"synthetic": false,
  "schemaVersion": "2025-09-10",
  "outputs":
- {"o": ["6ca92ee435a3c2ee.olean"],
-  "i": "20992a09880bf227.ilean",
+ {"o": ["02d8fa10d4f05869.olean"],
+  "i": "9ddc18da2feffc7c.ilean",
   "c": "4a886c188f9f1082.c"},
  "log":
  [{"message":
@@ -24,7 +24,7 @@
         ["Mathlib.Tactic:importAllArts", "396d263b6f422b32"],
         ["ScaleWordTheorems.Basic transitive imports (legacy)",
          "6135f90b4dcb48bc"],
-        ["ScaleWordTheorems.Basic:importAllArts", "42e10917dcfb5ee2"]]]]],
+        ["ScaleWordTheorems.Basic:importAllArts", "6dd2f604299d527f"]]]]],
     ["libs",
      [["import dynlibs", "00000000000006bb"],
       ["package external libraries", "00000000000006bb"],
@@ -33,7 +33,7 @@
   ["Lean 4.27.0, commit 2fcce7258eeb6e324366bc25f9058293b04b7547",
    "6f43b597efea5d4c"],
   ["/home/inthar/scale-word-theorems/ScaleWordTheorems/PairIdentificationAndDeletion.lean",
-   "01bee38124186fb6"],
+   "7b72bbbfd19b840a"],
   ["options", [["-Dpp.unicode.fun=true", "9b94070140457fab"]]],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "162b2fdd9375a906"}
+ "depHash": "018374d650abc7cb"}

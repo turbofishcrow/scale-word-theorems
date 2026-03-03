@@ -10,6 +10,20 @@
   ["/home/inthar/scale-word-theorems/.lake/build/lib/lean/ScaleWordTheorems/Permutation.olean"],
   "ScaleWordTheorems.PairIdentificationAndDeletion":
   ["/home/inthar/scale-word-theorems/.lake/build/lib/lean/ScaleWordTheorems/PairIdentificationAndDeletion.olean"],
+  "ScaleWordTheorems.MV3OddRegular":
+  ["/home/inthar/scale-word-theorems/.lake/build/lib/lean/ScaleWordTheorems/MV3OddRegular.olean"],
+  "ScaleWordTheorems.MV3EvenRegular":
+  ["/home/inthar/scale-word-theorems/.lake/build/lib/lean/ScaleWordTheorems/MV3EvenRegular.olean"],
+  "ScaleWordTheorems.MV3Defs":
+  ["/home/inthar/scale-word-theorems/.lake/build/lib/lean/ScaleWordTheorems/MV3Defs.olean"],
+  "ScaleWordTheorems.MV3Classification":
+  ["/home/inthar/scale-word-theorems/.lake/build/lib/lean/ScaleWordTheorems/MV3Classification.olean"],
+  "ScaleWordTheorems.MV3Balance":
+  ["/home/inthar/scale-word-theorems/.lake/build/lib/lean/ScaleWordTheorems/MV3Balance.olean"],
+  "ScaleWordTheorems.MV3AS":
+  ["/home/inthar/scale-word-theorems/.lake/build/lib/lean/ScaleWordTheorems/MV3AS.olean"],
+  "ScaleWordTheorems.MOSBalanced":
+  ["/home/inthar/scale-word-theorems/.lake/build/lib/lean/ScaleWordTheorems/MOSBalanced.olean"],
   "ScaleWordTheorems.MOS":
   ["/home/inthar/scale-word-theorems/.lake/build/lib/lean/ScaleWordTheorems/MOS.olean"],
   "ScaleWordTheorems.Basic":

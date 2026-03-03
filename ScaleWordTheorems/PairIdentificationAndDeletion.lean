@@ -50,6 +50,19 @@ def isPairwiseMOS [NeZero n] (w : TernaryNecklace n) : Prop :=
   w.isPartialPairwiseMOS StepSize.m StepSize.s ∧
   w.isPartialPairwiseMOS StepSize.L StepSize.s
 
+/-- A partial pairwise-primitive-MOS condition: identifying step sizes `x` and `y`
+    gives a primitive MOS. -/
+def isPartialPairwisePrimMOS [NeZero n] (w : TernaryNecklace n) (x y : StepSize) : Prop :=
+  Necklace.hasMOSProperty (w.identifyPair x y) ∧
+  Necklace.isPrimitive (w.identifyPair x y)
+
+/-- Pairwise-well-formed (PWF), also called pairwise-primitive-MOS:
+    all three pair identifications give primitive MOSes. -/
+def isPairwisePrimMOS [NeZero n] (w : TernaryNecklace n) : Prop :=
+  w.isPartialPairwisePrimMOS StepSize.L StepSize.m ∧
+  w.isPartialPairwisePrimMOS StepSize.m StepSize.s ∧
+  w.isPartialPairwisePrimMOS StepSize.L StepSize.s
+
 /-! ### Deletion-MOS
 
 A ternary necklace is called *deletion-MOS* if it satisfies all three *partial

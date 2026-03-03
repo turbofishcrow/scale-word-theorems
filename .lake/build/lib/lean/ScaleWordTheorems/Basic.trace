@@ -1,9 +1,9 @@
 {"synthetic": false,
  "schemaVersion": "2025-09-10",
  "outputs":
- {"o": ["c13737f3af0b725e.olean"],
-  "i": "f250fbeb3e3fee64.ilean",
-  "c": "dfc1fc06ac2acdf4.c"},
+ {"o": ["ab275799c75778d5.olean"],
+  "i": "ecbc94267d7b4cd7.ilean",
+  "c": "4b2dc4de53c5325c.c"},
  "log":
  [{"message":
    ".> LEAN_PATH=/home/inthar/scale-word-theorems/.lake/packages/Cli/.lake/build/lib/lean:/home/inthar/scale-word-theorems/.lake/packages/batteries/.lake/build/lib/lean:/home/inthar/scale-word-theorems/.lake/packages/Qq/.lake/build/lib/lean:/home/inthar/scale-word-theorems/.lake/packages/aesop/.lake/build/lib/lean:/home/inthar/scale-word-theorems/.lake/packages/proofwidgets/.lake/build/lib/lean:/home/inthar/scale-word-theorems/.lake/packages/importGraph/.lake/build/lib/lean:/home/inthar/scale-word-theorems/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/home/inthar/scale-word-theorems/.lake/packages/plausible/.lake/build/lib/lean:/home/inthar/scale-word-theorems/.lake/packages/mathlib/.lake/build/lib/lean:/home/inthar/scale-word-theorems/.lake/build/lib/lean /home/inthar/.elan/toolchains/leanprover--lean4---v4.27.0-rc1/bin/lean /home/inthar/scale-word-theorems/ScaleWordTheorems/Basic.lean -o /home/inthar/scale-word-theorems/.lake/build/lib/lean/ScaleWordTheorems/Basic.olean -i /home/inthar/scale-word-theorems/.lake/build/lib/lean/ScaleWordTheorems/Basic.ilean -c /home/inthar/scale-word-theorems/.lake/build/ir/ScaleWordTheorems/Basic.c --setup /home/inthar/scale-word-theorems/.lake/build/ir/ScaleWordTheorems/Basic.setup.json --json",
@@ -38,7 +38,7 @@
   ["Lean 4.27.0, commit 2fcce7258eeb6e324366bc25f9058293b04b7547",
    "6f43b597efea5d4c"],
   ["/home/inthar/scale-word-theorems/ScaleWordTheorems/Basic.lean",
-   "16c661e5772a4bbe"],
+   "646233ac0f15c394"],
   ["options", [["-Dpp.unicode.fun=true", "9b94070140457fab"]]],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "344a1661d0536392"}
+ "depHash": "01ea88bd2d5e88e0"}

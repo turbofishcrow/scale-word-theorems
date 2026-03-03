@@ -84,7 +84,7 @@ LEAN_EXPORT lean_object* lp_ScaleWordTheorems_Necklace_allKStepSubwords(lean_obj
 LEAN_EXPORT lean_object* lp_ScaleWordTheorems_Necklace_count___redArg(lean_object*, lean_object*, lean_object*, lean_object*);
 LEAN_EXPORT uint8_t lp_ScaleWordTheorems_instInhabitedStepSize;
 LEAN_EXPORT uint8_t lp_ScaleWordTheorems_Necklace_isRepetitionOf___redArg___lam__0(lean_object*, lean_object*, lean_object*, lean_object*, lean_object*, lean_object*);
-LEAN_EXPORT lean_object* lp_ScaleWordTheorems_Necklace_toNecklace___redArg(lean_object*, lean_object*, lean_object*);
+LEAN_EXPORT lean_object* lp_ScaleWordTheorems_Necklace_toNecklace___redArg(lean_object*, lean_object*);
 lean_object* lp_mathlib_ZMod_fintype___redArg(lean_object*);
 LEAN_EXPORT lean_object* lp_ScaleWordTheorems_ZVector_ofList(lean_object*, lean_object*, lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_ScaleWordTheorems_Necklace_allKStepSubwords___redArg(lean_object*, lean_object*, lean_object*);
@@ -92,7 +92,7 @@ lean_object* lp_mathlib_NonUnitalNonAssocRing_toNonUnitalNonAssocSemiring___redA
 uint8_t l_Option_instDecidableEq___redArg(lean_object*, lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_ScaleWordTheorems_instFintypeStepSize;
 LEAN_EXPORT lean_object* lp_ScaleWordTheorems_Necklace_count___redArg___boxed(lean_object*, lean_object*, lean_object*, lean_object*);
-LEAN_EXPORT lean_object* lp_ScaleWordTheorems_Necklace_toNecklace___redArg___boxed(lean_object*, lean_object*, lean_object*);
+LEAN_EXPORT lean_object* lp_ScaleWordTheorems_Necklace_toNecklace___redArg___boxed(lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_ScaleWordTheorems_ZVector_instAdd(lean_object*);
 LEAN_EXPORT lean_object* lp_ScaleWordTheorems_Necklace_length___redArg(lean_object*);
 LEAN_EXPORT lean_object* lp_ScaleWordTheorems_Necklace_abelianize(lean_object*, lean_object*, lean_object*);
@@ -119,6 +119,7 @@ LEAN_EXPORT lean_object* lp_ScaleWordTheorems_StepSize_ctorElim___boxed(lean_obj
 LEAN_EXPORT uint8_t lp_ScaleWordTheorems_TernaryNecklace_identifyPair___redArg(lean_object*, uint8_t, uint8_t, lean_object*);
 LEAN_EXPORT uint8_t lp_ScaleWordTheorems_Necklace_isRepetitionOf(lean_object*, lean_object*, lean_object*, lean_object*, lean_object*, lean_object*);
 lean_object* lean_int_mul(lean_object*, lean_object*);
+lean_object* l_List_get___redArg(lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_ScaleWordTheorems_StepSize_toCtorIdx(uint8_t);
 LEAN_EXPORT lean_object* lp_ScaleWordTheorems_Necklace_distinctElements___redArg(lean_object*, lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_ScaleWordTheorems_instReprStepSize;
@@ -167,7 +168,6 @@ lean_object* l_List_ofFn___redArg(lean_object*, lean_object*);
 static lean_object* lp_ScaleWordTheorems_instReprStepSize_repr___closed__4;
 LEAN_EXPORT lean_object* lp_ScaleWordTheorems_Necklace_period___redArg(lean_object*, lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_ScaleWordTheorems_Necklace_slice___boxed(lean_object*, lean_object*, lean_object*, lean_object*, lean_object*, lean_object*);
-lean_object* l_List_get_x21Internal___redArg(lean_object*, lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_ScaleWordTheorems_StepSize_s_elim(lean_object*, uint8_t, lean_object*, lean_object*);
 LEAN_EXPORT lean_object* lp_ScaleWordTheorems_Necklace_allKStepMultisets(lean_object*, lean_object*, lean_object*, lean_object*, lean_object*, lean_object*);
 LEAN_EXPORT uint8_t lp_ScaleWordTheorems_Necklace_count___redArg___lam__0(lean_object*, lean_object*, lean_object*, lean_object*);
@@ -1002,22 +1002,22 @@ x_7 = lp_ScaleWordTheorems_Necklace_allKStepVectors___redArg(x_2, x_4, x_5, x_6)
 return x_7;
 }
 }
-LEAN_EXPORT lean_object* lp_ScaleWordTheorems_Necklace_toNecklace___redArg(lean_object* x_1, lean_object* x_2, lean_object* x_3) {
+LEAN_EXPORT lean_object* lp_ScaleWordTheorems_Necklace_toNecklace___redArg(lean_object* x_1, lean_object* x_2) {
 _start:
 {
-lean_object* x_4; lean_object* x_5; lean_object* x_6; 
-x_4 = l_List_lengthTR___redArg(x_2);
-x_5 = lp_mathlib_ZMod_val(x_4, x_3);
-lean_dec(x_4);
-x_6 = l_List_get_x21Internal___redArg(x_1, x_2, x_5);
-return x_6;
+lean_object* x_3; lean_object* x_4; lean_object* x_5; 
+x_3 = l_List_lengthTR___redArg(x_1);
+x_4 = lp_mathlib_ZMod_val(x_3, x_2);
+lean_dec(x_3);
+x_5 = l_List_get___redArg(x_1, x_4);
+return x_5;
 }
 }
 LEAN_EXPORT lean_object* lp_ScaleWordTheorems_Necklace_toNecklace(lean_object* x_1, lean_object* x_2, lean_object* x_3, lean_object* x_4, lean_object* x_5) {
 _start:
 {
 lean_object* x_6; 
-x_6 = lp_ScaleWordTheorems_Necklace_toNecklace___redArg(x_2, x_4, x_5);
+x_6 = lp_ScaleWordTheorems_Necklace_toNecklace___redArg(x_3, x_5);
 return x_6;
 }
 }
@@ -1027,19 +1027,19 @@ _start:
 lean_object* x_6; 
 x_6 = lp_ScaleWordTheorems_Necklace_toNecklace(x_1, x_2, x_3, x_4, x_5);
 lean_dec(x_5);
-lean_dec(x_4);
-lean_dec_ref(x_3);
+lean_dec(x_3);
+lean_dec_ref(x_2);
 return x_6;
 }
 }
-LEAN_EXPORT lean_object* lp_ScaleWordTheorems_Necklace_toNecklace___redArg___boxed(lean_object* x_1, lean_object* x_2, lean_object* x_3) {
+LEAN_EXPORT lean_object* lp_ScaleWordTheorems_Necklace_toNecklace___redArg___boxed(lean_object* x_1, lean_object* x_2) {
 _start:
 {
-lean_object* x_4; 
-x_4 = lp_ScaleWordTheorems_Necklace_toNecklace___redArg(x_1, x_2, x_3);
-lean_dec(x_3);
+lean_object* x_3; 
+x_3 = lp_ScaleWordTheorems_Necklace_toNecklace___redArg(x_1, x_2);
 lean_dec(x_2);
-return x_4;
+lean_dec(x_1);
+return x_3;
 }
 }
 LEAN_EXPORT lean_object* lp_ScaleWordTheorems_StepSize_ctorIdx(uint8_t x_1) {
