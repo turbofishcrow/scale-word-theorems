@@ -708,6 +708,111 @@ private lemma two_values_contradicts_ternary (w : TernaryNecklace n)
     · exact hLs (h1.trans h3.symm)
   · exact hLm (h1.trans h2.symm)
 
+/-- When `seq 0 = seq 1` in an alternating sequence, all `(l·k)`-step vectors
+    at abstract positions take one of two values (non-crossing vs crossing). -/
+private lemma equal_seq_lk_class (w : TernaryNecklace n)
+    (k r : ℕ) (seq : Fin 2 → ZVector StepSize) (l : ℕ)
+    (hl_pos : 0 < l) (hl_lt : l < n)
+    (hseq : ∀ i : Fin (n - 1),
+      Necklace.kStepVector w (r + i.val * k) k =
+        seq ⟨i.val % 2, Nat.mod_lt _ (by omega)⟩)
+    (heq : seq ⟨0, by omega⟩ = seq ⟨1, by omega⟩)
+    (j : ℕ) (hj : j < n) :
+    Necklace.kStepVector w (r + j * k) (l * k) =
+      if j < n - l then Necklace.kStepVector w r (l * k)
+      else Necklace.kStepVector w (r + (n - l) * k) (l * k) := by
+  have hT_eq : ∀ i : ℕ, i < n - 1 →
+      Necklace.kStepVector w (r + i * k) k = seq ⟨0, by omega⟩ := by
+    intro i hi
+    have h := hseq ⟨i, hi⟩
+    rw [h]
+    rcases Nat.mod_two_eq_zero_or_one i with hpar | hpar
+    · congr 1; ext; exact hpar
+    · rw [show (⟨i % 2, _⟩ : Fin 2) = ⟨1, by omega⟩ from by ext; exact hpar]
+      exact heq.symm
+  induction j with
+  | zero => simp [show 0 < n - l from by omega]
+  | succ j IH =>
+    have hj_lt : j < n := by omega
+    have hT_eq' := hT_eq
+    have IH := IH hj_lt hT_eq'
+    have hrec : Necklace.kStepVector w (r + (j + 1) * k) (l * k) =
+        Necklace.kStepVector w (r + j * k) (l * k) -
+        Necklace.kStepVector w (r + j * k) k +
+        Necklace.kStepVector w (r + (j + l) * k) k := by
+      have h := kStepVector_window_shift_fun w (r + j * k) k l hl_pos
+      rw [show r + j * k + k = r + (j + 1) * k from by ring,
+          show r + j * k + l * k = r + (j + l) * k from by ring] at h
+      exact h
+    have hTj : Necklace.kStepVector w (r + j * k) k = seq ⟨0, by omega⟩ :=
+      hT_eq j (by omega)
+    by_cases h_nc : j + 1 < n - l
+    · -- Non-crossing: T(j+l) = seq 0, so S(j+1) = S(j) = S(0)
+      have hTjl : Necklace.kStepVector w (r + (j + l) * k) k = seq ⟨0, by omega⟩ :=
+        hT_eq (j + l) (by omega)
+      rw [hrec, hTj, hTjl, IH, if_pos (show j < n - l from by omega), if_pos h_nc]
+      funext a; simp only [ZVector.sub_apply, ZVector.add_apply]; omega
+    · by_cases h_eq : j + 1 = n - l
+      · -- Transition: j+1 = n-l, trivially S(n-l) = S(n-l)
+        simp [h_eq]
+      · -- Crossing: T(j+l) wraps around, still equals seq 0, so S(j+1) = S(j) = S(n-l)
+        have hjl_ge : j + l ≥ n := by omega
+        have hperiod : Necklace.kStepVector w (r + (j + l) * k) k =
+            Necklace.kStepVector w (r + (j + l - n) * k) k := by
+          have hmod : (r + (j + l) * k) % n = (r + (j + l - n) * k) % n := by
+            have : r + (j + l) * k = r + (j + l - n) * k + n * k := by
+              have : (j + l) * k = (j + l - n) * k + n * k := by
+                rw [← add_mul, Nat.sub_add_cancel hjl_ge]
+              omega
+            rw [this]; exact Nat.add_mul_mod_self_left _ n k
+          rw [← kStepVector_mod_n w (r + (j + l) * k) k,
+              ← kStepVector_mod_n w (r + (j + l - n) * k) k, hmod]
+        have hTjl : Necklace.kStepVector w (r + (j + l) * k) k = seq ⟨0, by omega⟩ := by
+          rw [hperiod]; exact hT_eq (j + l - n) (by omega)
+        rw [hrec, hTj, hTjl, IH, if_neg (show ¬(j < n - l) from by omega), if_neg h_nc]
+        funext a; simp only [ZVector.sub_apply, ZVector.add_apply]; omega
+
+/-- If a ternary necklace has an AS, the two AS terms are distinct.
+
+    **Proof.** Assume `seq 0 = seq 1`. Then all non-closing k-step vectors equal `seq 0`.
+    The modular inverse `l₀` (with `l₀·k ≡ 1 mod n`) gives `(l₀·k)`-step vectors
+    that take at most 2 values, contradicting ternarity. -/
+lemma as_seq_ne (w : TernaryNecklace n) (htern : isTernary w)
+    (k r : ℕ) (seq : Fin 2 → ZVector StepSize)
+    (hcop : Nat.Coprime k n)
+    (hseq : ∀ i : Fin (n - 1),
+      Necklace.kStepVector w (r + i.val * k) k =
+        seq ⟨i.val % 2, Nat.mod_lt _ (by omega)⟩)
+    (_ : ∀ j : Fin 2,
+      Necklace.kStepVector w (r + (n - 1) * k) k ≠ seq j) :
+    seq ⟨0, by omega⟩ ≠ seq ⟨1, by omega⟩ := by
+  intro heq
+  have hn_ge : n ≥ 3 := ternary_length_ge_three w htern
+  obtain ⟨l₀, hl₀_pos, hl₀_lt, hl₀_inv⟩ := exists_modular_inverse k hcop (by omega)
+  -- Classify all (l₀·k)-step vectors into at most 2 values
+  have hclass := fun j hj =>
+    equal_seq_lk_class w k r seq l₀ hl₀_pos hl₀_lt hseq heq j hj
+  -- Every (l₀·k)-step vector equals one of two values
+  have hab : ∀ p : ZMod n,
+      Necklace.kStepVector w p.val (l₀ * k) =
+        Necklace.kStepVector w r (l₀ * k) ∨
+      Necklace.kStepVector w p.val (l₀ * k) =
+        Necklace.kStepVector w (r + (n - l₀) * k) (l₀ * k) := by
+    intro p
+    obtain ⟨j, hj⟩ := coprime_affine_surj k r hcop (by omega) p
+    have hmod : p.val = (r + j.val * k) % n := by
+      have h1 : (↑(p.val) : ZMod n) = (↑(r + j.val * k) : ZMod n) := by
+        rw [natCast_zmod_val, Nat.cast_add, Nat.cast_mul, natCast_zmod_val, hj]
+      have h2 := congr_arg ZMod.val h1
+      rwa [ZMod.val_natCast, ZMod.val_natCast,
+           Nat.mod_eq_of_lt (ZMod.val_lt p)] at h2
+    rw [show p.val = (r + j.val * k) % n from hmod, kStepVector_mod_n]
+    have := hclass j.val (ZMod.val_lt j)
+    split_ifs at this
+    · exact Or.inl this
+    · exact Or.inr this
+  exact two_values_contradicts_ternary w htern l₀ k (Or.inl hl₀_inv) hn_ge _ _ hab
+
 /-- Count of even elements below `m` in `ZMod n`. -/
 private lemma card_filter_lt_even_zmod (m : ℕ) (hm_even : m % 2 = 0) (hmn : m ≤ n) :
     (Finset.filter (fun j : ZMod n =>
