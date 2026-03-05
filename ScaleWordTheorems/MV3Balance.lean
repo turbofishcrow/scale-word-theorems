@@ -3917,167 +3917,685 @@ theorem pwf_classification (w : TernaryNecklace n)
   · exact Or.inl hs
   · exact Or.inr (pwf_isOddRegular_of_not_sporadic w htern hpwf hodd hs)
 
+/-- `isEvenRegular` is preserved under `applyPerm` (backward direction):
+    if `applyPerm τ w` is even-regular, so is `w`. -/
+private lemma isEvenRegular_of_isEvenRegular_applyPerm (τ : Equiv.Perm StepSize)
+    (w : TernaryNecklace n)
+    (h : isEvenRegular (Necklace.applyPerm τ w)) :
+    isEvenRegular w := by
+  obtain ⟨hprim', heven, σ, a, c, ha, hc, haodd, hcop, hn, hcL, hcm, hcs, hmos, hdel⟩ := h
+  have hprim : Necklace.isPrimitive w := by
+    have := isPrimitive_applyPerm τ.symm _ hprim'
+    rwa [Necklace.applyPerm_symm_cancel] at this
+  rw [← Necklace.applyPerm_mul] at hcL hcm hcs hmos hdel
+  exact ⟨hprim, heven, σ * τ, a, c, ha, hc, haodd, hcop, hn, hcL, hcm, hcs, hmos, hdel⟩
 
+/-! ### Coprime counts for balanced primitive ternary necklaces -/
 
-/-- Balanced primitive ternary scales with counts (a, a, c) and odd length
-    have coprime equinumerous identification counts: gcd(2a, c) = 1. -/
-private lemma balanced_two_equal_coprime (w : TernaryNecklace n)
-    (_hbal : Necklace.isBalanced w) (_hprim : Necklace.isPrimitive w)
-    (_htern : isTernary w)
-    (_hcountL : Necklace.count w .L = a)
-    (_hcountm : Necklace.count w .m = a)
-    (_hcounts : Necklace.count w .s = c)
-    (_hodd : n % 2 = 1) :
-    Nat.Coprime (2 * a) c := sorry
+/-- Length of filter-by-equality as sum of indicators (for StepSize). -/
+private lemma list_filter_beq_length_as_sum (l : List StepSize) (a : StepSize) :
+    ((l.filter (· == a)).length : ℤ) =
+    (l.map (fun x => if x = a then (1 : ℤ) else 0)).sum := by
+  induction l with
+  | nil => simp
+  | cons h t ih =>
+    simp only [List.filter_cons, List.map_cons, List.sum_cons, beq_iff_eq]
+    split_ifs with heq <;> simp_all; ring
 
-/-- Balanced primitive ternary scales with counts (a, a, c) have
-    deletion-MOS for .s (the non-equal step size). -/
-private lemma balanced_two_equal_deletionMOS (w : TernaryNecklace n)
-    (_hbal : Necklace.isBalanced w) (_hprim : Necklace.isPrimitive w)
-    (_htern : isTernary w)
-    (_hcountL : Necklace.count w .L = a)
-    (_hcountm : Necklace.count w .m = a)
-    (_hcounts : Necklace.count w .s = c)
-    (_hmos : isPartialPairwiseMOS w .L .m) :
-    isPartialDeletionMOS w .s := sorry
+/-- Sum of ternary k-step vector letter counts over all starting positions. -/
+private lemma kStepVector_sum_all_ternary (w : TernaryNecklace n)
+    (k : ℕ) (a : StepSize) :
+    ∑ i ∈ Finset.range n, (Necklace.kStepVector w i k) a =
+    ↑k * ↑(Necklace.count w a) := by
+  -- Step 1: Express each kStepVector count as sum of indicators
+  have h_expand : ∀ i, i < n →
+      (Necklace.kStepVector w i k) a = ∑ m ∈ Finset.range k,
+        (if w (((i + m : ℕ) : ZMod n)) = a then (1 : ℤ) else 0) := by
+    intro i _hi
+    unfold Necklace.kStepVector ZVector.ofList Necklace.slice
+    rw [show i + k - i = k from by omega, List.map_map,
+        list_filter_beq_length_as_sum, List.map_map]
+    simp [pure, bind, Nat.cast_add, List.flatMap]
+    rw [list_range_map_sum_eq_finset, ← Finset.sum_boole]
+    apply Finset.sum_congr rfl; intro m _; simp [Function.comp]
+  -- Step 2: Rewrite LHS as double Finset sum and exchange
+  have h_lhs : ∑ i ∈ Finset.range n, (Necklace.kStepVector w i k) a =
+      ∑ i ∈ Finset.range n, ∑ m ∈ Finset.range k,
+        (if w (((i + m : ℕ) : ZMod n)) = a then (1 : ℤ) else 0) :=
+    Finset.sum_congr rfl (fun i hi => h_expand i (Finset.mem_range.mp hi))
+  rw [h_lhs, Finset.sum_comm]
+  -- Step 3: Each inner sum equals count(w, a) by cyclic shift invariance
+  have h_shift : ∀ m : ℕ, ∑ i ∈ Finset.range n,
+      (if w (((i + m : ℕ) : ZMod n)) = a then (1 : ℤ) else 0) =
+      ↑(Necklace.count w a) := by
+    intro m
+    induction m with
+    | zero =>
+      simp only [Nat.add_zero]
+      simp_rw [show ∀ i : ℕ, (if w ((i : ℕ) : ZMod n) = a then (1 : ℤ) else 0) =
+          ↑(if w ((i : ℕ) : ZMod n) = a then 1 else 0 : ℕ) from
+          fun i => by split_ifs <;> simp]
+      rw [← Nat.cast_sum, Finset.sum_boole]
+      congr 1; unfold Necklace.count
+      apply Finset.card_bij (fun i _hi => ((i : ℕ) : ZMod n))
+      · intro i hi
+        simp only [Finset.mem_filter] at hi ⊢
+        exact ⟨Finset.mem_univ _, hi.2⟩
+      · intro i₁ hi₁ i₂ hi₂ h
+        have h1 := (Finset.mem_filter.mp hi₁).1
+        have h2 := (Finset.mem_filter.mp hi₂).1
+        rw [Finset.mem_range] at h1 h2
+        have := congr_arg ZMod.val h
+        rwa [ZMod.val_natCast, ZMod.val_natCast,
+             Nat.mod_eq_of_lt h1, Nat.mod_eq_of_lt h2] at this
+      · intro j hj
+        simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hj
+        exact ⟨ZMod.val j, Finset.mem_filter.mpr ⟨Finset.mem_range.mpr (ZMod.val_lt j),
+          by rw [ZMod.natCast_zmod_val]; exact hj⟩, ZMod.natCast_zmod_val j⟩
+    | succ m ih =>
+      rw [← ih]
+      simp_rw [show ∀ i : ℕ, i + (m + 1) = (i + 1) + m from fun i => by omega]
+      set g : ℕ → ℤ := fun j => if w (((j + m : ℕ) : ZMod n)) = a then 1 else 0 with hg_def
+      have hg_periodic : g n = g 0 := by
+        simp only [hg_def, Nat.zero_add]
+        have : ((n + m : ℕ) : ZMod n) = ((m : ℕ) : ZMod n) := by push_cast; simp
+        rw [this]
+      have h1 := Finset.sum_range_succ' g n
+      have h2 := Finset.sum_range_succ g n
+      linarith
+  rw [Finset.sum_congr rfl (fun m _ => h_shift m), Finset.sum_const, Finset.card_range,
+      nsmul_eq_mul]
 
-/-- Balanced primitive ternary scales with two equal counts that are not
-    even-regular must have odd length. -/
-private lemma balanced_two_equal_n_odd (w : TernaryNecklace n)
-    (_hbal : Necklace.isBalanced w) (_hprim : Necklace.isPrimitive w)
-    (_htern : isTernary w) (_hne : ¬ isEvenRegular w)
-    (_hcountL : Necklace.count w .L = a)
-    (_hcountm : Necklace.count w .m = a)
-    (_hcounts : Necklace.count w .s = c) (_hac : a ≠ c) :
-    n % 2 = 1 := sorry
+/-- If N integers sum to N·m and pairwise differ by ≤ 1, they all equal m. -/
+private lemma int_sum_constant_of_close {N : ℕ} [NeZero N]
+    (f : Fin N → ℤ) (m : ℤ)
+    (hsum : ∑ i, f i = ↑N * m)
+    (hclose : ∀ i j, Int.natAbs (f i - f j) ≤ 1) :
+    ∀ i, f i = m := by
+  by_contra h; push_neg at h
+  obtain ⟨i₀, hi₀⟩ := h
+  have hbd : ∀ j, f j ≤ f i₀ + 1 := fun j => by
+    have := hclose j i₀; omega
+  have hbd' : ∀ j, f i₀ - 1 ≤ f j := fun j => by
+    have := hclose i₀ j; omega
+  rcases lt_or_gt_of_ne hi₀ with hlt | hgt
+  · have hle : ∀ j, f j ≤ m := fun j => by linarith [hbd j, Int.add_one_le_of_lt hlt]
+    -- f j ≤ m for all j, and f(i₀) < m, so ∑ f < ∑ m
+    have hstrict : ∑ i : Fin N, f i < ∑ _i : Fin N, m :=
+      Finset.sum_lt_sum (fun j _ => hle j) ⟨i₀, Finset.mem_univ _, hlt⟩
+    simp [Finset.sum_const, Fintype.card_fin] at hstrict
+    linarith
+  · have hge : ∀ j, m ≤ f j := fun j => by linarith [hbd' j, Int.le_sub_one_of_lt hgt]
+    have hstrict : (∑ _i : Fin N, m) < ∑ i : Fin N, f i :=
+      Finset.sum_lt_sum (fun j _ => hge j) ⟨i₀, Finset.mem_univ _, hgt⟩
+    simp [Finset.sum_const, Fintype.card_fin] at hstrict
+    linarith
+
+/-- k-step vector at step 1 is an indicator. -/
+private lemma kStepVector_one (w : TernaryNecklace n) (i : ℕ) (a : StepSize) :
+    (Necklace.kStepVector w i 1) a =
+    if w ((i : ℕ) : ZMod n) = a then 1 else 0 := by
+  rw [kStepVector_eq_cast_count']
+  simp only [Necklace.slice, show i + 1 - i = 1 from by omega, List.range_one]
+  split_ifs with h <;> simp [List.count_nil, h]
+
+/-- Balanced + primitive + ternary → gcd of all three counts is 1.
+    Proof: if g=gcd>1, set k=n/g. Balance + integer average → all k-step
+    subwords have the same letter counts. Window shift → w(i)=w(i+k),
+    giving translational period k<n, contradicting primitivity. -/
+private lemma balanced_primitive_coprime_counts (w : TernaryNecklace n)
+    (hbal : Necklace.isBalanced w) (hprim : Necklace.isPrimitive w)
+    (_htern : isTernary w) :
+    Nat.gcd (Nat.gcd (Necklace.count w .L) (Necklace.count w .m))
+      (Necklace.count w .s) = 1 := by
+  by_contra hg
+  set G := Nat.gcd (Nat.gcd (Necklace.count w .L) (Necklace.count w .m)) (Necklace.count w .s)
+    with hG_def
+  have hG_gt1 : G > 1 := by
+    have : G ≠ 0 := by
+      intro h0
+      have hdvd : (0 : ℕ) ∣ Necklace.count w .s := h0 ▸ (Nat.gcd_dvd_right _ _)
+      rw [zero_dvd_iff] at hdvd
+      exact absurd hdvd (by have := count_pos_of_isTernary w _htern .s; omega)
+    omega
+  have hG_L : G ∣ Necklace.count w .L :=
+    dvd_trans (Nat.gcd_dvd_left _ _) (Nat.gcd_dvd_left _ _)
+  have hG_m : G ∣ Necklace.count w .m :=
+    dvd_trans (Nat.gcd_dvd_left _ _) (Nat.gcd_dvd_right _ _)
+  have hG_s : G ∣ Necklace.count w .s := Nat.gcd_dvd_right _ _
+  have hG_n : G ∣ n := by
+    have h := count_total w
+    obtain ⟨a, ha⟩ := hG_L; obtain ⟨b, hb⟩ := hG_m; obtain ⟨c, hc⟩ := hG_s
+    exact ⟨a + b + c, by linarith⟩
+  set k := n / G
+  have hn_pos : 0 < n := NeZero.pos n
+  have hk_pos : 0 < k := Nat.div_pos (Nat.le_of_dvd hn_pos hG_n) (by omega)
+  have hk_lt : k < n := Nat.div_lt_self hn_pos hG_gt1
+  have hk_dvd : k ∣ n := Nat.div_dvd_of_dvd hG_n
+  have hkG : k * G = n := Nat.div_mul_cancel hG_n
+  -- For each letter and position, kStepVector = count / G
+  have hall_eq : ∀ (a : StepSize) (i : ℕ), i < n →
+      (Necklace.kStepVector w i k) a = ↑(Necklace.count w a / G) := by
+    intro a i hi
+    -- Sum identity over Fin n
+    have hfsum : ∑ j : Fin n, (Necklace.kStepVector w j.val k) a =
+        ↑n * ↑(Necklace.count w a / G) := by
+      rw [Fin.sum_univ_eq_sum_range (fun i => (Necklace.kStepVector w i k) a)]
+      rw [kStepVector_sum_all_ternary]
+      have hga : G ∣ Necklace.count w a := by cases a <;> assumption
+      have : k * Necklace.count w a = n * (Necklace.count w a / G) := by
+        nlinarith [Nat.div_mul_cancel hga, hkG]
+      exact_mod_cast this
+    -- Balance: pairwise differ by ≤ 1
+    have hfclose : ∀ i j : Fin n,
+        Int.natAbs ((Necklace.kStepVector w i.val k) a -
+          (Necklace.kStepVector w j.val k) a) ≤ 1 := by
+      intro ⟨i', hi'⟩ ⟨j', hj'⟩
+      rw [kStepVector_eq_cast_count', kStepVector_eq_cast_count']
+      exact hbal k hk_pos hk_lt _ _ a
+        (List.mem_ofFn.mpr ⟨⟨i', hi'⟩, rfl⟩)
+        (List.mem_ofFn.mpr ⟨⟨j', hj'⟩, rfl⟩)
+    exact int_sum_constant_of_close _ _ hfsum hfclose ⟨i, hi⟩
+  -- Extend hall_eq to all ℕ via kStepVector_mod_n
+  have hall_eq' : ∀ (a : StepSize) (i : ℕ),
+      (Necklace.kStepVector w i k) a = ↑(Necklace.count w a / G) := by
+    intro a i; rw [← kStepVector_mod_n]; exact hall_eq a (i % n) (Nat.mod_lt _ hn_pos)
+  -- Window shift: w(i) = w(i + k) for all i : ZMod n
+  have hperiod : ∀ i : ZMod n, w i = w (i + (k : ZMod n)) := by
+    intro i
+    set j := ZMod.val i with hj_def
+    have hj_lt : j < n := ZMod.val_lt i
+    -- Split kStepVector at j and j+1, cancel common (k-1)-step part
+    have hone_eq : ∀ a : StepSize,
+        (Necklace.kStepVector w j 1) a = (Necklace.kStepVector w (j + k) 1) a := by
+      intro a
+      have hd1 := kStepVector_add w j 1 (k - 1) a
+      rw [show 1 + (k - 1) = k from by omega] at hd1
+      have hd2 := kStepVector_add w (j + 1) (k - 1) 1 a
+      rw [show k - 1 + 1 = k from by omega,
+          show j + 1 + (k - 1) = j + k from by omega] at hd2
+      linarith [hall_eq' a j, hall_eq' a (j + 1)]
+    -- Derive w ↑(j+k) = w ↑j from kStepVector_one and hone_eq
+    have hwjk : w (((j + k : ℕ) : ZMod n)) = w ((j : ℕ) : ZMod n) := by
+      have h1 := kStepVector_one w j (w ((j : ℕ) : ZMod n))
+      rw [if_pos rfl] at h1
+      have h2 := kStepVector_one w (j + k) (w ((j : ℕ) : ZMod n))
+      rw [← hone_eq (w ((j : ℕ) : ZMod n)), h1] at h2
+      by_contra hne; rw [if_neg hne] at h2; exact absurd h2 one_ne_zero
+    -- Convert: i = ↑j and i + ↑k = ↑(j+k)
+    conv_lhs => rw [show i = ((j : ℕ) : ZMod n) from (ZMod.natCast_zmod_val i).symm]
+    conv_rhs => rw [show i + (k : ZMod n) = ((j + k : ℕ) : ZMod n) from by
+      rw [show i = ((j : ℕ) : ZMod n) from (ZMod.natCast_zmod_val i).symm]; push_cast; ring]
+    exact hwjk.symm
+  exact absurd (Necklace.period_length_le_of_translational_period w k hk_pos hk_lt hk_dvd hperiod)
+    (by rw [hprim]; omega)
+
+/-- If f ∘ w is primitive, then w is primitive (local copy). -/
+private lemma isPrimitive_of_comp' {α β : Type*} [DecidableEq α] [DecidableEq β]
+    (w : Necklace α n) (f : α → β)
+    (h : Necklace.isPrimitive (f ∘ w)) :
+    Necklace.isPrimitive w := by
+  by_contra h_not_prim
+  set pLen := (Necklace.period w).length
+  have hpLen_pos : 0 < pLen := period_length_pos w
+  have hpLen_lt_n : pLen < n := by
+    have := Necklace.period_length_le_n w; unfold Necklace.isPrimitive at h_not_prim; omega
+  have hpLen_dvd : pLen ∣ n := period_dvd_length w
+  have hw_per : ∀ j : ℕ, w ((j : ℕ) : ZMod n) = w ((j % pLen : ℕ) : ZMod n) :=
+    fun j => period_pointwise w j
+  have hfw_per : ∀ j : ℕ, (f ∘ w) ((j : ℕ) : ZMod n) = (f ∘ w) ((j % pLen : ℕ) : ZMod n) :=
+    fun j => congrArg f (hw_per j)
+  have hfw_trans : ∀ i : ZMod n, (f ∘ w) i = (f ∘ w) (i + (pLen : ZMod n)) := by
+    intro i
+    have h1 := hfw_per i.val
+    have h2 := hfw_per (i.val + pLen)
+    simp only [ZMod.natCast_val, ZMod.cast_id', id_eq] at h1
+    rw [Nat.add_mod_right] at h2
+    rw [h1, ← h2]; congr 1
+    simp [Nat.cast_add, ZMod.natCast_val, ZMod.cast_id']
+  have := Necklace.period_length_le_of_translational_period (f ∘ w) pLen hpLen_pos hpLen_lt_n
+    hpLen_dvd hfw_trans
+  unfold Necklace.isPrimitive at h; omega
+
+/-- A pair identification of a balanced ternary necklace is pairwise-prim-MOS
+    when its binary image has coprime counts. -/
+private lemma balanced_identification_primMOS (w : TernaryNecklace n)
+    (hbal : Necklace.isBalanced w) (htern : isTernary w)
+    (x y : StepSize) (hxy : x ≠ y)
+    (hcop : Nat.gcd (Necklace.count (identifiedToBinary (identifyPair w x y)) .L)
+                     (Necklace.count (identifiedToBinary (identifyPair w x y)) .s) = 1) :
+    isPartialPairwisePrimMOS w x y :=
+  ⟨balanced_ternary_identification_hasMOS w hbal htern x y hxy,
+   isPrimitive_of_comp' (identifyPair w x y) msToBinary
+     (necklace_with_coprime_sig_is_primitive n _ _ hcop _ rfl rfl)⟩
+
+/-- Binary L-count after identifying m=s equals count_L. -/
+private lemma identifiedToBinary_ms_count_L (w : TernaryNecklace n) :
+    Necklace.count (identifiedToBinary (identifyPair w .m .s)) .L = Necklace.count w .L := by
+  unfold Necklace.count; congr 1; ext i
+  simp only [Finset.mem_filter, Finset.mem_univ, true_and,
+    identifiedToBinary, msToBinary, identifyPair, Function.comp]
+  constructor
+  · intro h; by_contra hne; cases hw : w i <;> simp_all
+  · intro h; simp [h]
+
+/-- Binary L-count after identifying L=s equals count_m. -/
+private lemma identifiedToBinary_Ls_count_L (w : TernaryNecklace n) :
+    Necklace.count (identifiedToBinary (identifyPair w .L .s)) .L = Necklace.count w .m := by
+  unfold Necklace.count; congr 1; ext i
+  simp only [Finset.mem_filter, Finset.mem_univ, true_and,
+    identifiedToBinary, msToBinary, identifyPair, Function.comp]
+  constructor
+  · intro h; by_contra hne; cases hw : w i <;> simp_all
+  · intro h; simp [h]
 
 /-- The sporadic balanced scale (Fraenkel word `LmLsLmL`) is pairwise-prim-MOS.
-    All three identifications have coprime binary counts:
-    L=m → (6,1), m=s → (4,3), L=s → (2,5). -/
+    Since n = 7 is prime, all identification binary counts are coprime. -/
 private lemma sporadicBalanced_isPairwisePrimMOS (w : TernaryNecklace n)
     (_hprim : Necklace.isPrimitive w)
     (hbal : Necklace.isBalanced w) (htern : isTernary w)
     (h : isSporadicBalanced w) :
-    isPairwisePrimMOS w := sorry
+    isPairwisePrimMOS w := by
+  obtain ⟨hn7, _⟩ := h
+  have h7_prime : Nat.Prime 7 := by decide
+  have hL_pos := count_pos_of_isTernary w htern .L
+  have hm_pos := count_pos_of_isTernary w htern .m
+  have hs_pos := count_pos_of_isTernary w htern .s
+  have htotal := count_total w
+  -- For 0 < x < 7: gcd(x, 7-x) = 1 since 7 is prime
+  have coprime_pair : ∀ x : ℕ, 0 < x → x < 7 → Nat.gcd x (7 - x) = 1 := by
+    intro x hx hx7
+    rw [← Nat.gcd_add_self_right x (7 - x), show (7 - x) + x = 7 from by omega,
+        Nat.gcd_comm]
+    exact h7_prime.coprime_iff_not_dvd.mpr (by omega)
+  refine ⟨?_, ?_, ?_⟩
+  · -- L=m: binary s = count_s, binary L = n - count_s
+    exact balanced_identification_primMOS w hbal htern .L .m (by decide) (by
+      have hcs := identifiedToBinary_count_s w (show Necklace.count w .s = _ from rfl)
+      have htot := binary_count_total (identifiedToBinary (identifyPair w .L .m))
+      have hcL : Necklace.count (identifiedToBinary (identifyPair w .L .m)) .L =
+          7 - Necklace.count w .s := by rw [hcs] at htot; omega
+      rw [hcL, hcs, Nat.gcd_comm]; exact coprime_pair _ hs_pos (by omega))
+  · -- m=s: binary L = count_L
+    exact balanced_identification_primMOS w hbal htern .m .s (by decide) (by
+      have hcL := identifiedToBinary_ms_count_L w
+      have htot := binary_count_total (identifiedToBinary (identifyPair w .m .s))
+      have hcs : Necklace.count (identifiedToBinary (identifyPair w .m .s)) .s =
+          7 - Necklace.count w .L := by rw [hcL] at htot; omega
+      rw [hcL, hcs]; exact coprime_pair _ hL_pos (by omega))
+  · -- L=s: binary L = count_m
+    exact balanced_identification_primMOS w hbal htern .L .s (by decide) (by
+      have hcL := identifiedToBinary_Ls_count_L w
+      have htot := binary_count_total (identifiedToBinary (identifyPair w .L .s))
+      have hcs : Necklace.count (identifiedToBinary (identifyPair w .L .s)) .s =
+          7 - Necklace.count w .m := by rw [hcL] at htot; omega
+      rw [hcL, hcs]; exact coprime_pair _ hm_pos (by omega))
+
+/-- In a balanced ternary necklace with count_L = count_m, if two non-s positions
+    p and p+d are separated only by s's (with 0 < d and d+1 < n), then w(p) ≠ w(p+d).
+    Uses balanced_two_equal_no_x2_y0: the (d+1)-step subword has x≥2, y=0. -/
+private lemma balanced_Lm_consecutive_nonS_differ (w : TernaryNecklace n)
+    (hbal : Necklace.isBalanced w) (_htern : isTernary w)
+    (hLm : Necklace.count w .L = Necklace.count w .m)
+    (p d : ℕ) (hd_pos : 0 < d) (hdk_lt : d + 1 < n)
+    (hp : w ((p : ℕ) : ZMod n) ≠ .s)
+    (hpd : w (((p + d : ℕ) : ℕ) : ZMod n) ≠ .s)
+    (hall_s : ∀ t : ℕ, 0 < t → t < d → w (((p + t : ℕ) : ℕ) : ZMod n) = .s) :
+    w ((p : ℕ) : ZMod n) ≠ w (((p + d : ℕ) : ℕ) : ZMod n) := by
+  intro h_same
+  -- Determine which letter w(p) is (L or m, since ≠ s)
+  have hv_Lm : w ((p : ℕ) : ZMod n) = .L ∨ w ((p : ℕ) : ZMod n) = .m := by
+    cases h : w ((p : ℕ) : ZMod n) with | L => left; rfl | m => right; rfl | s => exact absurd h hp
+  -- Every position in [p, p+d] has value w(p) or s
+  have h_entries : ∀ t : ℕ, t < d + 1 →
+      w (((p + t : ℕ) : ℕ) : ZMod n) = w ((p : ℕ) : ZMod n) ∨
+      w (((p + t : ℕ) : ℕ) : ZMod n) = .s := by
+    intro t ht
+    rcases Nat.eq_zero_or_pos t with rfl | ht_pos
+    · simp
+    · rcases Nat.lt_or_ge t d with ht_lt | ht_ge
+      · right; exact hall_s t ht_pos ht_lt
+      · have : t = d := by omega
+        subst this; left; exact h_same.symm
+  -- kStepVector for "other" letter y = 0 (inductive, avoids slice membership)
+  have hkv_other : ∀ y : StepSize, y ≠ w ((p : ℕ) : ZMod n) → y ≠ .s →
+      Necklace.kStepVector w p (d + 1) y = 0 := by
+    intro y hy_ne_v hy_ne_s
+    have h_ne_y : ∀ t : ℕ, t < d + 1 → w (((p + t : ℕ) : ℕ) : ZMod n) ≠ y := by
+      intro t ht
+      rcases h_entries t ht with hv | hs
+      · rw [hv]; exact Ne.symm hy_ne_v
+      · rw [hs]; exact Ne.symm hy_ne_s
+    suffices ∀ (m q : ℕ), (∀ t, t < m → w (((q + t : ℕ) : ℕ) : ZMod n) ≠ y) →
+        Necklace.kStepVector w q m y ≤ 0 from
+      le_antisymm (this (d + 1) p h_ne_y) (kStepVector_nonneg' w p (d + 1) y)
+    intro m
+    induction m with
+    | zero =>
+      intro q _
+      unfold Necklace.kStepVector Necklace.slice ZVector.ofList
+      simp
+    | succ m ih =>
+      intro q hall
+      have hsplit := kStepVector_add w q m 1 y
+      have hm := ih q (fun t ht => hall t (by omega))
+      have h1 : Necklace.kStepVector w (q + m) 1 y ≤ 0 := by
+        rw [(kStepVector_singleton w (q + m)) y]
+        have hne := hall m (by omega)
+        simp only [Nat.cast_add] at hne ⊢
+        simp [hne]
+      linarith
+  -- kStepVector for w(p) letter ≥ 2 (first + middle + last)
+  have hkv_ge2 : Necklace.kStepVector w p (d + 1) (w ((p : ℕ) : ZMod n)) ≥ 2 := by
+    have hsplit := kStepVector_add w p 1 d (w ((p : ℕ) : ZMod n))
+    rw [show 1 + d = d + 1 from by omega] at hsplit
+    have hp1 : Necklace.kStepVector w p 1 (w ((p : ℕ) : ZMod n)) = 1 := by
+      rw [(kStepVector_singleton w p) (w ((p : ℕ) : ZMod n))]; simp
+    have hsplit2 := kStepVector_add w (p + 1) (d - 1) 1 (w ((p : ℕ) : ZMod n))
+    rw [show d - 1 + 1 = d from by omega,
+        show p + 1 + (d - 1) = p + d from by omega] at hsplit2
+    have hpd1 : Necklace.kStepVector w (p + d) 1 (w ((p : ℕ) : ZMod n)) = 1 := by
+      rw [(kStepVector_singleton w (p + d)) (w ((p : ℕ) : ZMod n))]
+      simp [h_same]
+    linarith [kStepVector_nonneg' w (p + 1) (d - 1) (w ((p : ℕ) : ZMod n))]
+  -- Final contradiction via balanced_two_equal_no_x2_y0
+  rcases hv_Lm with hv_L | hv_m
+  · rw [hv_L] at hkv_ge2 hkv_other
+    exact balanced_two_equal_no_x2_y0 w hbal .L .m (by decide) hLm (d + 1) (by omega) hdk_lt p
+      hkv_ge2 (hkv_other .m (by decide) (by decide))
+  · rw [hv_m] at hkv_ge2 hkv_other
+    exact balanced_two_equal_no_x2_y0 w hbal .m .L (by decide) hLm.symm (d + 1) (by omega) hdk_lt p
+      hkv_ge2 (hkv_other .L (by decide) (by decide))
+
+/-- Balanced primitive ternary with L=m counts and c even → deletion of s gives MOS.
+    This is the core of Step 6: the deletion word (L's and m's only) alternates. -/
+private lemma balanced_Lm_c_even_deletionMOS (w : TernaryNecklace n)
+    (hbal : Necklace.isBalanced w) (_hprim : Necklace.isPrimitive w)
+    (htern : isTernary w)
+    (hLm : Necklace.count w .L = Necklace.count w .m)
+    (hc_even : Necklace.count w .s % 2 = 0) :
+    isPartialDeletionMOS w .s := by
+  set a := Necklace.count w .L with ha_def
+  set c := Necklace.count w .s with hc_def
+  set D := TernaryNecklace.orderedDeletion w .s with hD_def
+  have ha_pos : a > 0 := count_pos_of_isTernary w htern .L
+  have hc_pos : c > 0 := count_pos_of_isTernary w htern .s
+  have hn_eq : n = 2 * a + c := by
+    have h := count_total w
+    change a + Necklace.count w .m + c = n at h
+    linarith [hLm]
+  have hn_pos : n > 0 := by omega
+  haveI : NeZero n := ⟨by omega⟩
+  have hDlen : D.length = 2 * a := by
+    have h := orderedDeletion_length w .s
+    change D.length + c = n at h; omega
+  have hmem_ne_s : ∀ v ∈ D, v ≠ .s := fun v hv => by
+    simp only [D, TernaryNecklace.orderedDeletion, List.mem_filter,
+      decide_eq_true_eq] at hv; exact hv.2
+  have hbin : ∀ i, (hi : i < D.length) → D[i] = .L ∨ D[i] = .m := by
+    intro i hi
+    have hne : D[i] ≠ .s := hmem_ne_s _ (List.getElem_mem hi)
+    cases h : D[i] <;> simp_all
+  have hDcountL : D.count .L = a := orderedDeletion_count_ne w .s .L (by decide)
+  have hDcountm : D.count .m = a :=
+    (orderedDeletion_count_ne w .s .m (by decide)).trans hLm.symm
+  -- Define position list P: positions of non-s entries in order
+  set P := (List.range n).filter (fun i => decide (w ((i : ℕ) : ZMod n) ≠ .s)) with hP_def
+  -- D = P.map (fun i => w(i)): use monadic normalization trick
+  have hD_eq_map : D = P.map (fun i => w ((i : ℕ) : ZMod n)) := by
+    show TernaryNecklace.orderedDeletion w .s =
+      ((List.range n).filter (fun i => decide (w ((i : ℕ) : ZMod n) ≠ .s))).map
+        (fun i => w ((i : ℕ) : ZMod n))
+    unfold TernaryNecklace.orderedDeletion
+    have heq : ∀ (l : List ℕ), (do let a ← l; pure (↑a : ZMod n)) =
+        l.map (Nat.cast : ℕ → ZMod n) := by
+      intro l; induction l with
+      | nil => rfl
+      | cons a l ih => simp only [List.map_cons]; exact congrArg _ ih
+    simp only [heq, List.map_map, List.filter_map, Function.comp_def]
+  have hP_len : P.length = 2 * a := by
+    rw [← hDlen, hD_eq_map, List.length_map]
+  -- P elements are < n
+  have hP_lt : ∀ i, (hi : i < P.length) → P[i] < n := by
+    intro i hi
+    exact List.mem_range.mp (List.mem_filter.mp (List.getElem_mem hi)).1
+  -- D[i] = w(P[i])
+  have hD_val : ∀ i₀, (hi₀ : i₀ < D.length) →
+      D[i₀] = w ((P[i₀]'(by rw [hP_len]; omega) : ℕ) : ZMod n) := by
+    intro i₀ hi₀
+    simp only [hD_eq_map, List.getElem_map]
+  -- P is sorted (strictly increasing)
+  have hP_sorted : P.Pairwise (· < ·) :=
+    List.Pairwise.filter _ List.pairwise_lt_range
+  -- w(P[i]) ≠ .s for all valid i
+  have hP_nonS : ∀ i, (hi : i < P.length) →
+      w ((P[i] : ℕ) : ZMod n) ≠ .s := by
+    intro i hi
+    exact decide_eq_true_eq.mp (List.mem_filter.mp (List.getElem_mem hi)).2
+  -- Gap property: between consecutive P entries, all values are s
+  have hP_gap : ∀ i₀, (hi₀ : i₀ + 1 < P.length) → ∀ q : ℕ,
+      P[i₀] < q → q < P[i₀ + 1] → w ((q : ℕ) : ZMod n) = .s := by
+    intro i₀ hi₀ q hq_lb hq_ub
+    by_contra h_not_s
+    have hq_lt_n : q < n := by have := hP_lt (i₀ + 1) hi₀; omega
+    have hq_mem : q ∈ P :=
+      List.mem_filter.mpr ⟨List.mem_range.mpr hq_lt_n, decide_eq_true_eq.mpr h_not_s⟩
+    obtain ⟨j, hj, hq_eq⟩ := List.mem_iff_getElem.mp hq_mem
+    have h1 : i₀ < j := by
+      by_contra hle; push_neg at hle
+      rcases Nat.lt_or_eq_of_le hle with hjlt | hjeq
+      · exact absurd (lt_trans
+          ((List.pairwise_iff_getElem.mp hP_sorted) j i₀ hj (by omega) hjlt) hq_lb)
+          (not_lt.mpr (le_of_eq hq_eq.symm))
+      · subst hjeq
+        exact absurd hq_lb (not_lt.mpr (le_of_eq hq_eq.symm))
+    have h2 : j < i₀ + 1 := by
+      by_contra hle; push_neg at hle
+      rcases Nat.lt_or_eq_of_le hle with hjlt | hjeq
+      · exact absurd (lt_trans hq_ub
+          ((List.pairwise_iff_getElem.mp hP_sorted) (i₀ + 1) j (by omega) hj (by omega)))
+          (not_lt.mpr (le_of_eq hq_eq))
+      · subst hjeq
+        exact absurd hq_ub (not_lt.mpr (le_of_eq hq_eq))
+    omega
+  -- Handle a = 1 separately: gap bound fails, but D has 2 elements and is trivially MOS
+  by_cases ha_ge2 : a ≥ 2
+  swap
+  · have ha1 : a = 1 := by omega
+    -- D is Nodup: count L = 1, count m = 1, count s = 0
+    have hnodup : D.Nodup := by
+      rw [List.nodup_iff_count_le_one]; intro a
+      cases a with
+      | L => rw [hDcountL, ha1]
+      | m => rw [hDcountm, ha1]
+      | s => simp [List.count_eq_zero.mpr (fun h => (hmem_ne_s .s h) rfl)]
+    have hne01 : D[0]'(by omega) ≠ D[1]'(by omega) :=
+      (List.pairwise_iff_getElem.mp hnodup) 0 1 (by omega) (by omega) (by omega)
+    exact alternating_circular_mos D 1 (by rw [hDlen, ha1]) (by omega)
+      (fun i hi => by rw [hDlen, ha1] at hi; interval_cases i <;> simp) hne01
+  -- From here, a ≥ 2
+  -- d+1 < n for any gap between consecutive P entries
+  have hP_gap_lt : ∀ i₀, (hi₀ : i₀ + 1 < P.length) →
+      P[i₀ + 1] - P[i₀] + 1 < n := by
+    -- Upper bound: P[j] + (P.length - j) ≤ n
+    have h_upper : ∀ j, (hj : j < P.length) → P[j] + (P.length - j) ≤ n := by
+      suffices ∀ d j, (hj : j < P.length) → j + d = P.length - 1 →
+          P[j] + (P.length - j) ≤ n from
+        fun j hj => this (P.length - 1 - j) j hj (by omega)
+      intro d; induction d with
+      | zero => intro j hj hd; have := hP_lt j (by omega); omega
+      | succ d ih =>
+        intro j hj hd
+        have := (List.pairwise_iff_getElem.mp hP_sorted) j (j + 1)
+          (by omega) (by omega : j + 1 < P.length) (by omega)
+        have := ih (j + 1) (by omega) (by omega)
+        omega
+    -- Lower bound: P[j] ≥ j
+    have h_lower : ∀ j, (hj : j < P.length) → j ≤ P[j] := by
+      intro j hj; induction j with
+      | zero => omega
+      | succ k ih =>
+        have := (List.pairwise_iff_getElem.mp hP_sorted) k (k + 1) (by omega) hj (by omega)
+        have := ih (by omega); omega
+    intro i₀ hi₀
+    have := h_lower i₀ (by omega)
+    have := h_upper (i₀ + 1) hi₀
+    have := (List.pairwise_iff_getElem.mp hP_sorted) i₀ (i₀ + 1) (by omega) (by omega) (by omega)
+    rw [hP_len] at *; omega
+  -- All consecutive D entries differ (non-wrapping)
+  have hall_diff_inner : ∀ (i₀ : ℕ) (_ : i₀ + 1 < D.length),
+      D[i₀] ≠ D[i₀ + 1] := by
+    intro i₀ hi₀
+    rw [hD_val i₀ (by omega), hD_val (i₀ + 1) (by omega)]
+    have hp₀ := hP_lt i₀ (by rw [hP_len]; omega)
+    have hp₁ := hP_lt (i₀ + 1) (by rw [hP_len]; omega)
+    have h_inc := (List.pairwise_iff_getElem.mp hP_sorted) i₀ (i₀ + 1)
+      (by rw [hP_len]; omega) (by rw [hP_len]; omega) (by omega)
+    set d := P[i₀ + 1]'(by rw [hP_len]; omega) - P[i₀]'(by rw [hP_len]; omega)
+    have hd_pos : 0 < d := by omega
+    have hpd_eq : P[i₀ + 1]'(by rw [hP_len]; omega) =
+        P[i₀]'(by rw [hP_len]; omega) + d := by omega
+    rw [hpd_eq]
+    exact balanced_Lm_consecutive_nonS_differ w hbal htern hLm
+      (P[i₀]'(by rw [hP_len]; omega)) d hd_pos
+      (hP_gap_lt i₀ (by rw [hP_len]; omega))
+      (hP_nonS i₀ (by rw [hP_len]; omega))
+      (by rw [← hpd_eq]; exact hP_nonS (i₀ + 1) (by rw [hP_len]; omega))
+      (fun t ht_pos ht_lt => by
+        exact hP_gap i₀ (by rw [hP_len]; omega)
+          (P[i₀]'(by rw [hP_len]; omega) + t) (by omega) (by omega))
+  -- Period 2: D[j+2] = D[j] (uses hall_diff_inner directly, no circular argument)
+  have hperiod2 : ∀ j, (hj : j + 2 < D.length) → D[j + 2]'(by omega) = D[j]'(by omega) := by
+    intro j hj
+    have := hall_diff_inner j (by omega)
+    have := hall_diff_inner (j + 1) (by omega)
+    rcases hbin j (by omega), hbin (j + 1) (by omega), hbin (j + 2) (by omega) with
+      ⟨h0 | h0, h1 | h1, h2 | h2⟩ <;> simp_all
+  -- Alternation: D[i] = D[i % 2]
+  have halt : ∀ i, (hi : i < D.length) → D[i] = D[i % 2]'(by omega) := by
+    intro i hi
+    exact Nat.strongRecOn i (fun m ih => by
+      intro hm; match m with
+      | 0 => rfl
+      | 1 => rfl
+      | m + 2 =>
+        rw [hperiod2 m (by omega), ih m (by omega) (by omega)]
+        congr 1; omega) hi
+  -- D[0] ≠ D[1]
+  have hne : D[0]'(by omega) ≠ D[1]'(by omega) := hall_diff_inner 0 (by omega)
+  exact alternating_circular_mos D a hDlen ha_pos halt hne
+
+/-- Balanced primitive ternary with L=m counts → isPairwisePrimMOS or isEvenRegular.
+    Uses coprime counts to show all identifications are primitive MOS (c odd),
+    or constructs isEvenRegular (c even). -/
+private lemma balanced_Lm_isPWF (w : TernaryNecklace n)
+    (hbal : Necklace.isBalanced w) (hprim : Necklace.isPrimitive w)
+    (htern : isTernary w)
+    (hLm : Necklace.count w .L = Necklace.count w .m) :
+    isPairwisePrimMOS w ∨ isEvenRegular w := by
+  set a := Necklace.count w .L with ha_def
+  set c := Necklace.count w .s with hc_def
+  -- gcd(a, c) = 1 from balanced_primitive_coprime_counts + gcd(a,a) = a
+  have hcop : Nat.gcd a c = 1 := by
+    have h := balanced_primitive_coprime_counts w hbal hprim htern
+    rwa [show Nat.gcd a (Necklace.count w .m) = a from
+      by rw [← hLm]; exact Nat.gcd_self a] at h
+  have hn_eq : n = 2 * a + c := by have := count_total w; omega
+  by_cases hc_odd : c % 2 = 1
+  · -- c odd: all identification binary counts are coprime
+    left
+    -- gcd(2a, c) = 1 since gcd(a,c)=1 and c is odd
+    have hcop_2ac : Nat.gcd (2 * a) c = 1 :=
+      ((Nat.coprime_two_left.mpr (by rwa [Nat.odd_iff])).mul_left hcop : Nat.Coprime _ _)
+    -- gcd(a, a+c) = gcd(a, c) = 1
+    have hcop_aac : Nat.gcd a (a + c) = 1 := by
+      rw [show a + c = c + a from by omega, Nat.gcd_add_self_right]; exact hcop
+    refine ⟨?_, ?_, ?_⟩
+    · -- L=m identification: binary counts (2a, c)
+      exact balanced_identification_primMOS w hbal htern .L .m (by decide) (by
+        rw [identifiedToBinary_count_L w rfl hLm.symm, identifiedToBinary_count_s w rfl]
+        exact hcop_2ac)
+    · -- m=s identification: binary L = count_L = a, binary s = a+c
+      exact balanced_identification_primMOS w hbal htern .m .s (by decide) (by
+        have hcL := identifiedToBinary_ms_count_L w
+        have hcs : Necklace.count (identifiedToBinary (identifyPair w .m .s)) .s = a + c := by
+          have := binary_count_total (identifiedToBinary (identifyPair w .m .s))
+          rw [hcL] at this; omega
+        rw [hcL, hcs]; exact hcop_aac)
+    · -- L=s identification: binary L = count_m = a, binary s = a+c
+      exact balanced_identification_primMOS w hbal htern .L .s (by decide) (by
+        have hcL := identifiedToBinary_Ls_count_L w
+        have hcs : Necklace.count (identifiedToBinary (identifyPair w .L .s)) .s = a + c := by
+          have := binary_count_total (identifiedToBinary (identifyPair w .L .s))
+          rw [hcL, ← hLm] at this; omega
+        rw [hcL, ← hLm, hcs]; exact hcop_aac)
+  · -- c even: construct isEvenRegular w
+    right
+    have hc_even : c % 2 = 0 := by omega
+    have ha_pos : a > 0 := count_pos_of_isTernary w htern .L
+    set c' := c / 2
+    have hc_eq : c = 2 * c' := by omega
+    have hc'_pos : c' > 0 := by
+      have := count_pos_of_isTernary w htern .s; omega
+    have ha_odd : a % 2 = 1 := by
+      by_contra h; push_neg at h
+      have h2 : 2 ∣ Nat.gcd a c := Nat.dvd_gcd (by omega) (by omega)
+      omega
+    have hcop' : Nat.Coprime a c' := by
+      have h : Nat.gcd a c' ∣ Nat.gcd a c :=
+        Nat.dvd_gcd (Nat.gcd_dvd_left _ _) (dvd_trans (Nat.gcd_dvd_right _ _) ⟨2, by omega⟩)
+      rw [hcop] at h; exact Nat.dvd_one.mp h
+    have hmos_Lm : isPartialPairwiseMOS w .L .m :=
+      balanced_ternary_identification_hasMOS w hbal htern .L .m (by decide)
+    have hdel_s : isPartialDeletionMOS w .s :=
+      balanced_Lm_c_even_deletionMOS w hbal hprim htern hLm hc_even
+    exact ⟨hprim, by omega, 1, a, c', ha_pos, hc'_pos, ha_odd, hcop', by omega,
+      by rw [Necklace.applyPerm_one],
+      by rw [Necklace.applyPerm_one]; exact hLm.symm,
+      by rw [Necklace.applyPerm_one]; exact hc_eq,
+      by rw [Necklace.applyPerm_one]; exact hmos_Lm,
+      by rw [Necklace.applyPerm_one]; exact hdel_s⟩
 
 /-- Balanced primitive ternary scales that aren't even-regular are PWF.
 
-    **Proof outline** (5.1.1(b)+(c) + 5.1.4): By `balanced_primitive_ternary_isPairwiseMOS`,
-    each identification is MOS. It remains to show each identification is primitive.
-    • If all three counts are distinct (a > b > c), this follows from
-      5.1.1(b): the scale is the Fraenkel word `abacaba`, whose identifications
-      are all primitive.
-    • If two counts are equal (WLOG a = b ≠ c), then it is odd-regular, hence PWF. -/
+    **Proof**: By `balanced_primitive_coprime_counts`, the gcd of all three
+    step counts is 1. For each case:
+    • Two equal counts: normalize to L=m via `applyPerm`, then use coprime
+      binary counts for all three identifications.
+    • All three counts distinct: the scale is the Fraenkel word (sporadic balanced),
+      and n=7 prime gives coprime binary counts. -/
 private lemma balanced_not_even_isPWF (w : TernaryNecklace n)
     (hbal : Necklace.isBalanced w) (hprim : Necklace.isPrimitive w)
     (htern : isTernary w) (_hne : ¬ isEvenRegular w) :
     isPairwisePrimMOS w := by
-  -- Case split: all three counts distinct, or some two are equal
   by_cases hLm : Necklace.count w .L = Necklace.count w .m
-  · -- Two equal counts (at least L = m). Build isOddRegular directly.
-    set a := Necklace.count w .L
-    set c := Necklace.count w .s
-    -- Handle all-three-equal as a subcase
-    by_cases hac : a = c
-    · -- All three counts equal (a = b = c). n = 3a, n ≥ 3.
-      -- A primitive balanced ternary necklace with all equal counts still works.
-      -- Claim: By balance w = (xyz)^r, and by primitivity w = xyz.
-      -- This is PWF.
-      sorry
-    · -- L = m ≠ s.
-      have hne_w := _hne
-      -- n is odd
-      have hodd := balanced_two_equal_n_odd w hbal hprim htern hne_w rfl hLm.symm rfl hac
-      -- Coprimality: gcd(2a, c) = 1
-      have hcop := balanced_two_equal_coprime w hbal hprim htern rfl hLm.symm rfl hodd
-      -- Pairwise MOS for L=m (the equal pair)
-      have hmos : isPartialPairwiseMOS w .L .m :=
-        balanced_ternary_identification_hasMOS w hbal htern .L .m (by decide)
-      -- Deletion MOS for .s
-      have hdel := balanced_two_equal_deletionMOS w hbal hprim htern rfl hLm.symm rfl hmos
-      -- Positive counts and arithmetic
-      have ha_pos : a > 0 := count_pos_of_isTernary w htern .L
-      have hc_pos : c > 0 := count_pos_of_isTernary w htern .s
-      have hn_eq : n = 2 * a + c := by
-        have htotal := count_total w; linarith [hLm]
-      have hc_odd : c % 2 = 1 := by omega
-      -- Assemble isOddRegular
-      have hoddReg : isOddRegular w :=
-        ⟨hprim, hodd, 1, a, c, ha_pos, hc_pos, hc_odd, hcop, hn_eq,
-          by rw [Necklace.applyPerm_one],
-          by rw [Necklace.applyPerm_one]; exact hLm.symm,
-          by rw [Necklace.applyPerm_one],
-          by rwa [Necklace.applyPerm_one],
-          by rwa [Necklace.applyPerm_one]⟩
-      exact oddRegular_isPairwisePrimMOS w hoddReg
+  · exact (balanced_Lm_isPWF w hbal hprim htern hLm).elim id
+      fun h => absurd h _hne
   · by_cases hms : Necklace.count w .m = Necklace.count w .s
-    · -- m = s, L ≠ m. Use swap(L,s) to normalize to (a, a, c) at (L, m, s).
+    · -- m = s, L ≠ m. Use swap(L,s) to normalize to L=m form.
       set σ := Equiv.swap StepSize.L StepSize.s
       set w' := Necklace.applyPerm σ w
-      have hbal' : Necklace.isBalanced w' := isBalanced_applyPerm σ w hbal
-      have htern' : isTernary w' := (isTernary_applyPerm σ w).mpr htern
-      have hprim' : Necklace.isPrimitive w' := isPrimitive_applyPerm σ w hprim
-      -- Counts of w' = (count w s, count w m, count w L)
-      have hcL : Necklace.count w' .L = Necklace.count w .s := by
-        rw [count_applyPerm_eq]; simp [show σ.symm .L = .s from by decide]
-      have hcm : Necklace.count w' .m = Necklace.count w .m := by
-        rw [count_applyPerm_eq]; simp [show σ.symm .m = .m from by decide]
-      have hcs : Necklace.count w' .s = Necklace.count w .L := by
-        rw [count_applyPerm_eq]; simp [show σ.symm .s = .L from by decide]
-      -- w' has L = m counts (both = count w .m = count w .s)
       have hLm' : Necklace.count w' .L = Necklace.count w' .m := by
-        rw [hcL, hcm]; exact hms.symm
-      have hac' : Necklace.count w' .L ≠ Necklace.count w' .s := by
-        rw [hcL, hcs]; exact fun h => hLm (h.symm ▸ hms.symm)
-      have hne' : ¬ isEvenRegular w' := sorry -- even-regular preserved under σ
-      -- Apply the L=m case to w'
-      have hodd := balanced_two_equal_n_odd w' hbal' hprim' htern' hne' rfl hLm'.symm rfl hac'
-      have hcop := balanced_two_equal_coprime w' hbal' hprim' htern' rfl hLm'.symm rfl hodd
-      have hmos : isPartialPairwiseMOS w' .L .m :=
-        balanced_ternary_identification_hasMOS w' hbal' htern' .L .m (by decide)
-      have hdel := balanced_two_equal_deletionMOS w' hbal' hprim' htern' rfl hLm'.symm rfl hmos
-      have ha_pos : Necklace.count w' .L > 0 := count_pos_of_isTernary w' htern' .L
-      have hc_pos : Necklace.count w' .s > 0 := count_pos_of_isTernary w' htern' .s
-      have hn_eq : n = 2 * Necklace.count w' .L + Necklace.count w' .s := by
-        have htotal := count_total w'; linarith [hLm']
-      have hc_odd : Necklace.count w' .s % 2 = 1 := by omega
-      have hoddReg : isOddRegular w' :=
-        ⟨hprim', hodd, 1, _, _, ha_pos, hc_pos, hc_odd, hcop, hn_eq,
-          by simp, by simp [hLm'], by simp, by simpa using hmos, by simpa using hdel⟩
-      exact isPairwisePrimMOS_of_applyPerm σ w (oddRegular_isPairwisePrimMOS w' hoddReg)
+        rw [count_applyPerm_eq, count_applyPerm_eq]
+        simp [show σ.symm .L = .s from by decide, show σ.symm .m = .m from by decide]
+        exact hms.symm
+      rcases balanced_Lm_isPWF w' (isBalanced_applyPerm σ w hbal)
+        (isPrimitive_applyPerm σ w hprim) ((isTernary_applyPerm σ w).mpr htern) hLm' with h | h
+      · exact isPairwisePrimMOS_of_applyPerm σ w h
+      · exact absurd (isEvenRegular_of_isEvenRegular_applyPerm σ w h) _hne
     · by_cases hLs : Necklace.count w .L = Necklace.count w .s
-      · -- L = s, m ≠ s. Use swap(m,s) to normalize.
+      · -- L = s, m ≠ s. Use swap(m,s) to normalize to L=m form.
         set σ := Equiv.swap StepSize.m StepSize.s
         set w' := Necklace.applyPerm σ w
-        have hbal' : Necklace.isBalanced w' := isBalanced_applyPerm σ w hbal
-        have htern' : isTernary w' := (isTernary_applyPerm σ w).mpr htern
-        have hprim' : Necklace.isPrimitive w' := isPrimitive_applyPerm σ w hprim
-        have hcL : Necklace.count w' .L = Necklace.count w .L := by
-          rw [count_applyPerm_eq]; simp [show σ.symm .L = .L from by decide]
-        have hcm : Necklace.count w' .m = Necklace.count w .s := by
-          rw [count_applyPerm_eq]; simp [show σ.symm .m = .s from by decide]
-        have hcs : Necklace.count w' .s = Necklace.count w .m := by
-          rw [count_applyPerm_eq]; simp [show σ.symm .s = .m from by decide]
         have hLm' : Necklace.count w' .L = Necklace.count w' .m := by
-          rw [hcL, hcm]; exact hLs
-        have hac' : Necklace.count w' .L ≠ Necklace.count w' .s := by
-          rw [hcL, hcs]; exact hLm
-        have hne' : ¬ isEvenRegular w' := sorry -- even-regular preserved under σ
-        have hodd := balanced_two_equal_n_odd w' hbal' hprim' htern' hne' rfl hLm'.symm rfl hac'
-        have hcop := balanced_two_equal_coprime w' hbal' hprim' htern' rfl hLm'.symm rfl hodd
-        have hmos : isPartialPairwiseMOS w' .L .m :=
-          balanced_ternary_identification_hasMOS w' hbal' htern' .L .m (by decide)
-        have hdel := balanced_two_equal_deletionMOS w' hbal' hprim' htern' rfl hLm'.symm rfl hmos
-        have ha_pos : Necklace.count w' .L > 0 := count_pos_of_isTernary w' htern' .L
-        have hc_pos : Necklace.count w' .s > 0 := count_pos_of_isTernary w' htern' .s
-        have hn_eq : n = 2 * Necklace.count w' .L + Necklace.count w' .s := by
-          have htotal := count_total w'; linarith [hLm']
-        have hc_odd : Necklace.count w' .s % 2 = 1 := by omega
-        have hoddReg : isOddRegular w' :=
-          ⟨hprim', hodd, 1, _, _, ha_pos, hc_pos, hc_odd, hcop, hn_eq,
-            by simp, by simp [hLm'], by simp, by simpa using hmos, by simpa using hdel⟩
-        exact isPairwisePrimMOS_of_applyPerm σ w (oddRegular_isPairwisePrimMOS w' hoddReg)
-      · -- All three counts distinct → Fraenkel word
+          rw [count_applyPerm_eq, count_applyPerm_eq]
+          simp [show σ.symm .L = .L from by decide, show σ.symm .m = .s from by decide]
+          exact hLs
+        rcases balanced_Lm_isPWF w' (isBalanced_applyPerm σ w hbal)
+          (isPrimitive_applyPerm σ w hprim) ((isTernary_applyPerm σ w).mpr htern) hLm' with h | h
+        · exact isPairwisePrimMOS_of_applyPerm σ w h
+        · exact absurd (isEvenRegular_of_isEvenRegular_applyPerm σ w h) _hne
+      · -- All three counts distinct → sporadic (Fraenkel word)
         exact sporadicBalanced_isPairwisePrimMOS w hprim hbal htern
           (balanced_all_distinct_isSporadicBalanced w hbal hprim htern hLm hms hLs)
 
@@ -4257,14 +4775,124 @@ theorem balanced_primitive_ternary_isMV3 (w : TernaryNecklace n)
     alternating X/Y; since `a` is odd, the two possible starting parities
     give exactly 2 sizes, not 3. -/
 private lemma evenRegular_not_isSV3 (w : TernaryNecklace n)
-    (h : isEvenRegular w) :
-    ¬ isSV3 w := sorry
+    (hbal : Necklace.isBalanced w) (h : isEvenRegular w) :
+    ¬ isSV3 w := by
+  intro ⟨_, hsv3⟩
+  obtain ⟨_, _, σ, a, c, ha, hc, ha_odd, _, hn, hcL, hcm, hcs, _, _⟩ := h
+  set w' := Necklace.applyPerm σ w
+  set k := a + c
+  have hbal' : Necklace.isBalanced w' := isBalanced_applyPerm σ w hbal
+  have hk_pos : 0 < k := by omega
+  have hkn : k < n := by omega
+  -- Complementarity at step k = n/2: v(i) + v(i+k) = total count
+  have hcomp : ∀ (i : ℕ) (st : StepSize),
+      Necklace.kStepVector w' i k st + Necklace.kStepVector w' (i + k) k st =
+      ↑(Necklace.count w' st) := by
+    intro i st
+    have := kStepVector_add w' i k k st
+    rw [show k + k = n from by omega, kStepVector_full_cycle] at this; linarith
+  -- Balance gives ≤ 1 difference per component
+  have hdiff : ∀ i j (st : StepSize), Int.natAbs (Necklace.kStepVector w' i k st -
+      Necklace.kStepVector w' j k st) ≤ 1 :=
+    fun i j st => balanced_kStepVector_diff w' hbal' k hk_pos hkn i j st
+  -- s-count is constant c (even total 2c + balance → no variation)
+  have hs_const : ∀ i, Necklace.kStepVector w' i k .s = ↑c := by
+    intro i
+    have hc_i := hcomp i .s; rw [hcs] at hc_i
+    have hd_i := hdiff i (i + k) .s
+    have : |(Necklace.kStepVector w' i k .s -
+        Necklace.kStepVector w' (i + k) k .s)| ≤ 1 := by
+      rw [Int.abs_eq_natAbs]; exact_mod_cast hd_i
+    rw [abs_le] at this; omega
+  -- L-count takes one of 2 values (odd total a + balance → 2*L = a ± 1)
+  have hL_vals : ∀ i, 2 * Necklace.kStepVector w' i k .L = ↑a - 1 ∨
+                       2 * Necklace.kStepVector w' i k .L = ↑a + 1 := by
+    intro i
+    have hc_i := hcomp i .L; rw [hcL] at hc_i
+    have hd_i := hdiff i (i + k) .L
+    have : |(Necklace.kStepVector w' i k .L -
+        Necklace.kStepVector w' (i + k) k .L)| ≤ 1 := by
+      rw [Int.abs_eq_natAbs]; exact_mod_cast hd_i
+    rw [abs_le] at this
+    have : (↑a : ℤ) % 2 = 1 := by omega
+    omega
+  -- L-component determines the full vector (s = c, m = k - L - s via component sum)
+  have hL_det : ∀ i j, Necklace.kStepVector w' i k .L = Necklace.kStepVector w' j k .L →
+      Necklace.kStepVector w' i k = Necklace.kStepVector w' j k := by
+    intro i j hLeq
+    funext a; cases a with
+    | L => exact hLeq
+    | s => exact (hs_const i).trans (hs_const j).symm
+    | m =>
+      have hi := kStepVector_component_sum w' i k; rw [stepSize_sum] at hi
+      have hj := kStepVector_component_sum w' j k; rw [stepSize_sum] at hj
+      linarith [hs_const i, hs_const j]
+  -- Every vector equals one of 2 reference vectors
+  have hvec : ∀ i, Necklace.kStepVector w' i k = Necklace.kStepVector w' 0 k ∨
+                    Necklace.kStepVector w' i k = Necklace.kStepVector w' k k := by
+    intro i
+    have hLk := hcomp 0 .L; rw [hcL, show (0 : ℕ) + k = k from by omega] at hLk
+    suffices Necklace.kStepVector w' i k .L = Necklace.kStepVector w' 0 k .L ∨
+             Necklace.kStepVector w' i k .L = Necklace.kStepVector w' k k .L by
+      rcases this with h | h
+      · left; exact hL_det i 0 h
+      · right; exact hL_det i k h
+    rcases hL_vals i with hi | hi <;> rcases hL_vals 0 with h0 | h0 <;>
+      [left; right; right; left] <;> omega
+  -- Card of distinct vectors ≤ 2
+  have hcard : (Necklace.allKStepMultisets w' k).toFinset.card ≤ 2 := by
+    rw [← distinctKStepVectors_card_eq]
+    calc (Necklace.allKStepVectors w' k).toFinset.card
+      ≤ ({Necklace.kStepVector w' 0 k, Necklace.kStepVector w' k k} : Finset _).card :=
+        Finset.card_le_card (fun v hv => by
+          simp only [Necklace.allKStepVectors, List.mem_toFinset, List.mem_map,
+            List.mem_range] at hv
+          obtain ⟨i, _, rfl⟩ := hv
+          exact (hvec i).elim (fun h => Finset.mem_insert.mpr (Or.inl h))
+            (fun h => Finset.mem_insert.mpr (Or.inr (Finset.mem_singleton.mpr h))))
+      _ ≤ 2 := le_trans (Finset.card_insert_le _ _) (by simp)
+  -- Card for w equals card for w' (permutation invariance), contradicting SV3
+  have h3 := hsv3 k hk_pos hkn
+  have : (Necklace.allKStepMultisets w k).toFinset.card ≤ 2 := by
+    rw [← Necklace.allKStepMultisets_toFinset_card_applyPerm σ]; exact hcard
+  linarith
+
+/-- The concrete Fraenkel word `LmLsLmL` of length 7. -/
+private def fraenkel7 : TernaryNecklace 7 := fun i =>
+  match i.val with
+  | 0 => StepSize.L | 1 => StepSize.m | 2 => StepSize.L | 3 => StepSize.s
+  | 4 => StepSize.L | 5 => StepSize.m | 6 => StepSize.L | _ => StepSize.s
+
+private lemma fraenkel7_sv3 (k : ℕ) (hk : 0 < k) (hkn : k < 7) :
+    (Necklace.allKStepMultisets fraenkel7 k).toFinset.card = 3 := by
+  interval_cases k <;> native_decide
 
 /-- Sporadic balanced scales (Fraenkel word `abacaba`) are SV3. -/
 private lemma sporadicBalanced_isSV3 (w : TernaryNecklace n)
-    (hprim : Necklace.isPrimitive w) (htern : isTernary w)
+    (_hprim : Necklace.isPrimitive w) (htern : isTernary w)
     (h : isSporadicBalanced w) :
-    isSV3 w := sorry
+    isSV3 w := by
+  obtain ⟨hn, σ, r, h0, h1, h2, h3, h4, h5, h6⟩ := h
+  subst hn
+  refine ⟨htern, fun k hk hkn => ?_⟩
+  -- Step 1: show w (j + r) = σ.symm (fraenkel7 j) for all j
+  have key : ∀ j : ZMod 7, w (j + r) = σ.symm (fraenkel7 j) := by
+    intro j; apply σ.injective; simp only [Equiv.apply_symm_apply]
+    -- goal: σ (w (j + r)) = fraenkel7 j
+    fin_cases j <;> simp_all [fraenkel7] <;> decide
+  -- Step 2: derive w = applyPerm σ.symm (fraenkel7 ∘ (· - r))
+  have hw_eq : w = fun i => σ.symm (fraenkel7 (i - r)) := by
+    funext i; have := key (i - r); rwa [sub_add_cancel] at this
+  -- Step 3: use permutation invariance to eliminate σ
+  rw [hw_eq, show (fun i => σ.symm (fraenkel7 (i - r))) =
+    Necklace.applyPerm σ.symm (fun i => fraenkel7 (i - r)) from rfl,
+    Necklace.allKStepMultisets_toFinset_card_applyPerm]
+  -- Step 4: use rotation invariance to eliminate r
+  rw [show (fun i : ZMod 7 => fraenkel7 (i - r)) =
+    (fun i => fraenkel7 (i + (-r))) from by funext i; congr 1; ring,
+    allKStepMultisets_toFinset_card_rotate]
+  -- Step 5: compute for the concrete Fraenkel word
+  exact fraenkel7_sv3 k hk hkn
 
 /-- A balanced primitive ternary scale is SV3 iff it is not even-regular. -/
 theorem balanced_sv3_iff_not_evenRegular (w : TernaryNecklace n)
@@ -4273,7 +4901,7 @@ theorem balanced_sv3_iff_not_evenRegular (w : TernaryNecklace n)
     isSV3 w ↔ ¬ isEvenRegular w := by
   constructor
   · intro hsv3 he
-    exact evenRegular_not_isSV3 w he hsv3
+    exact evenRegular_not_isSV3 w hbal he hsv3
   · intro hne
     rcases balanced_primitive_ternary_classification w hbal hprim htern with h | h | h
     · exact sporadicBalanced_isSV3 w hprim htern h

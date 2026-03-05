@@ -28,9 +28,9 @@
         ["ScaleWordTheorems.MV3EvenRegular:importAllArts", "7275ea94c9a2a644"],
         ["ScaleWordTheorems.MV3Balance transitive imports (legacy)",
          "ec14a9e2e6bcbf62"],
-        ["ScaleWordTheorems.MV3Balance:importAllArts", "642b72ef136dfa7a"],
+        ["ScaleWordTheorems.MV3Balance:importAllArts", "c0ad80122b2aa616"],
         ["ScaleWordTheorems.MV3Classification transitive imports (legacy)",
-         "58138bc14770f883"],
+         "b408f00392f208e4"],
         ["ScaleWordTheorems.MV3Classification:importAllArts",
          "ebf5082ffd8e9dfd"]]]]],
     ["libs",
@@ -44,4 +44,4 @@
    "ffd41410a88fad14"],
   ["options", [["-Dpp.unicode.fun=true", "9b94070140457fab"]]],
   ["Module.leanArgs: #[]", "00000000000006bb"]],
- "depHash": "f4576b98e7860623"}
+ "depHash": "04c66d2f5634aacf"}

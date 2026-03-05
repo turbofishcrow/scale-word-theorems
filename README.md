@@ -32,6 +32,9 @@ The generator theorem is proved by strong induction on `n`. The base cases are `
 - **`pairwiseMOS_implies_isBalanced`** — If all three pair identifications of a primitive ternary scale are MOS, then the scale is balanced.
 - **`balanced_primitive_ternary_isPairwiseMOS`** — Every balanced primitive ternary scale is pairwise-MOS (each pair identification yields a MOS).
 - **`balanced_primitive_ternary_isMV3`** — Every balanced primitive ternary scale is MV3.
+- **`pwf_classification`** — Pairwise-prim-MOS ternary scales are either sporadic balanced or odd-regular.
+- **`balanced_primitive_ternary_classification`** — Balanced primitive ternary scales are sporadic balanced, odd-regular, or even-regular.
+- **`balanced_sv3_iff_not_evenRegular`** — A balanced primitive ternary scale is SV3 iff it is not even-regular.
 
 ### Even-Regular Theory (sorry-free)
 
@@ -42,8 +45,6 @@ The generator theorem is proved by strong induction on `n`. The base cases are `
 
 The following theorems are stated and partially proved, with some `sorry`'d helper lemmas remaining:
 
-- **`pwf_classification`** — Pairwise-prim-MOS ternary scales are either sporadic balanced or odd-regular. (9 sorry's in helpers, mostly in the two-equal-counts case of `balanced_not_even_isPWF`)
-- **`balanced_primitive_ternary_classification`** — Balanced primitive ternary scales are sporadic balanced, odd-regular, or even-regular. (Depends on `pwf_classification`)
 - **`mv3_classification`** — Primitive MV3 ternary scales are balanced, sporadic non-balanced (`XYZYX`), or twisted. (12 sorry's in helpers, mostly transition-rule arguments for the unbalanced case)
 
 ## File Structure
@@ -91,7 +92,7 @@ Definitions: `isPairwiseMOS`, `isPairwisePrimMOS`, `isPartialDeletionMOS`, `isPa
 
 Definitions for the MV3 classification: `isMV3`, `isSV3`, `hasAS`, `isOddRegular`, `isEvenRegular`, `isSporadicBalanced`, `isSporadicNonBalanced`, `isTwistedMV3`.
 
-### [MV3AS.lean](ScaleWordTheorems/MV3AS.lean) (4429 lines)
+### [MV3AS.lean](ScaleWordTheorems/MV3AS.lean) (4534 lines)
 
 Alternating sequence theory: `as_odd_stepSignature`, `as_odd_isSV3`, `as_odd_isOddRegular`. Proves that an odd primitive ternary scale with an alternating sequence is odd-regular by constructing its coprime deletion-MOS and pairwise-prim-MOS structure.
 
@@ -99,14 +100,15 @@ Alternating sequence theory: `as_odd_stepSignature`, `as_odd_isSV3`, `as_odd_isO
 
 Odd-regular theory: `oddRegular_hasAS`, `oddRegular_isPairwisePrimMOS`. Shows odd-regular scales have alternating sequences and are pairwise-prim-MOS.
 
-### [MV3Balance.lean](ScaleWordTheorems/MV3Balance.lean) (4285 lines)
+### [MV3Balance.lean](ScaleWordTheorems/MV3Balance.lean) (4913 lines)
 
-Classification of balanced ternary scales:
+Classification of balanced ternary scales (sorry-free):
 - `pairwiseMOS_implies_isBalanced`, `balanced_primitive_ternary_isPairwiseMOS` — equivalence between balanced and pairwise-MOS for primitive ternary scales
 - `balanced_primitive_ternary_isMV3` — balanced primitive ternary scales are MV3
-- `pwf_classification` — PWF scales are sporadic balanced or odd-regular (partially complete)
-- `balanced_primitive_ternary_classification` — balanced = sporadic ∨ odd-regular ∨ even-regular (partially complete)
-- All-distinct-counts case fully proved: balanced + primitive + all distinct step counts → sporadic balanced (n = 7, Fraenkel word `LmLsLmL`)
+- `pwf_classification` — PWF scales are sporadic balanced or odd-regular
+- `balanced_primitive_ternary_classification` — balanced = sporadic ∨ odd-regular ∨ even-regular
+- `balanced_sv3_iff_not_evenRegular` — balanced + primitive + ternary → (SV3 ↔ ¬ even-regular)
+- All-distinct-counts case: balanced + primitive + all distinct step counts → sporadic balanced (n = 7, Fraenkel word `LmLsLmL`)
 
 ### [MV3EvenRegular.lean](ScaleWordTheorems/MV3EvenRegular.lean) (1053 lines)
 
@@ -134,10 +136,10 @@ Twisted necklace constructions and basic properties.
 | MV3Defs.lean | 1 | Near-complete |
 | MV3AS.lean | 1 | Near-complete |
 | MV3OddRegular.lean | 0 | Complete |
-| MV3Balance.lean | 9 | In progress |
+| MV3Balance.lean | 0 | Complete |
 | MV3EvenRegular.lean | 3 | In progress |
 | MV3Classification.lean | 12 | In progress |
-| **Total** | **26** | |
+| **Total** | **17** | |
 
 ## Building
 
