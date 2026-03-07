@@ -24,15 +24,18 @@ namespace Necklace
 
 variable {α : Type*} {n : ℕ} [NeZero n]
 
-/-- A necklace is an *interleaving* with `numStrands` strands if `numStrands > 1`,
-    `numStrands ∣ n`, and each strand gives the same sub-sequence as strand 0.
-    Strand `s` consists of positions `s, s + numStrands, s + 2·numStrands, …`. -/
-def isInterleaving (w : Necklace α n) (numStrands : ℕ) : Prop :=
-  numStrands > 1 ∧
-  numStrands ∣ n ∧
-  ∀ (s : Fin numStrands) (j : Fin (n / numStrands)),
-    w ((j.val * numStrands + s.val : ℕ) : ZMod n) =
-    w ((j.val * numStrands : ℕ) : ZMod n)
+/-- A necklace is a *k-interleaving* if `k > 1`, `k ∣ n`, and all k strands
+    of k-step multisets are rotations of each other. Strand `s` at position `j`
+    gives the k-step vector `kStepVector w (j * k + s) k`, a word of length
+    `n / k` whose letters are k-step multisets (`ZVector`s). -/
+def isInterleaving [DecidableEq α] (w : Necklace α n) (k : ℕ) : Prop :=
+  k > 1 ∧
+  k ∣ n ∧
+  ∀ (s : Fin k),
+    ∃ d : ℕ,
+      ∀ j : Fin (n / k),
+        Necklace.kStepVector w (j.val * k + s.val) k =
+        Necklace.kStepVector w ((j.val + d) % (n / k) * k) k
 
 /-- The reversal of a necklace: `w` read backwards, i.e. `fun i => w (n - i)`. -/
 def reversal (w : Necklace α n) : Necklace α n :=
@@ -42,17 +45,16 @@ def reversal (w : Necklace α n) : Necklace α n :=
 def isChiral (w : Necklace α n) : Prop :=
   ¬ ∃ r : ZMod n, ∀ i : ZMod n, w (-i) = w (i + r)
 
-/-- A necklace is a *contrainterleaving* if it consists of two mutually
-    interleaved strands that are the two chiralities (a scale and its reversal)
-    of a chiral sub-scale. That is, `numStrands = 2`, `2 ∣ n`, strand 0 gives
-    a sub-sequence and strand 1 gives its reversal (up to rotation). -/
-def isContrainterleaving (w : Necklace α n) : Prop :=
+/-- A necklace is a *2-contrainterleaving* if `2 ∣ n` and strand 1 of 2-step
+    multisets is the reversal of strand 0 (up to rotation). Strand `s` at
+    position `j` gives the 2-step vector `kStepVector w (j * 2 + s) 2`. -/
+def isContrainterleaving [DecidableEq α] (w : Necklace α n) : Prop :=
   2 ∣ n ∧
-  ∃ r : ZMod n,
-    -- strand 1 is the reversal of strand 0 (up to rotation r)
+  ∃ d : ℕ,
+    -- strand 1 is the reversal of strand 0 (up to rotation d)
     ∀ j : Fin (n / 2),
-      w ((j.val * 2 + 1 : ℕ) : ZMod n) =
-      w ((((n / 2 - 1 - j.val) * 2 : ℕ) : ZMod n) + r)
+      Necklace.kStepVector w (j.val * 2 + 1) 2 =
+      Necklace.kStepVector w (((n / 2 - 1 - j.val + d) % (n / 2)) * 2) 2
 
 /-- Extract strand `s` from a 2-interleaving: strand `s` consists of the
     2-step vectors at positions `s, s+2, s+4, …`, giving a sub-necklace of

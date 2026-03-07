@@ -1,6 +1,6 @@
 // Lean compiler output
 // Module: ScaleWordTheorems.MV3
-// Imports: public import Init public import ScaleWordTheorems.MV3Defs public import ScaleWordTheorems.MV3AS public import ScaleWordTheorems.MV3OddRegular public import ScaleWordTheorems.MV3EvenRegular public import ScaleWordTheorems.MV3Balance public import ScaleWordTheorems.MV3Classification
+// Imports: public import Init public import ScaleWordTheorems.MV3Defs public import ScaleWordTheorems.MV3AS public import ScaleWordTheorems.MV3OddRegular public import ScaleWordTheorems.MV3EvenRegular public import ScaleWordTheorems.MV3EvenRegularInterleaving public import ScaleWordTheorems.MV3Balance public import ScaleWordTheorems.MV3Classification
 #include <lean/lean.h>
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wunused-parameter"
@@ -18,6 +18,7 @@ lean_object* initialize_ScaleWordTheorems_ScaleWordTheorems_MV3Defs(uint8_t buil
 lean_object* initialize_ScaleWordTheorems_ScaleWordTheorems_MV3AS(uint8_t builtin);
 lean_object* initialize_ScaleWordTheorems_ScaleWordTheorems_MV3OddRegular(uint8_t builtin);
 lean_object* initialize_ScaleWordTheorems_ScaleWordTheorems_MV3EvenRegular(uint8_t builtin);
+lean_object* initialize_ScaleWordTheorems_ScaleWordTheorems_MV3EvenRegularInterleaving(uint8_t builtin);
 lean_object* initialize_ScaleWordTheorems_ScaleWordTheorems_MV3Balance(uint8_t builtin);
 lean_object* initialize_ScaleWordTheorems_ScaleWordTheorems_MV3Classification(uint8_t builtin);
 static bool _G_initialized = false;
@@ -38,6 +39,9 @@ res = initialize_ScaleWordTheorems_ScaleWordTheorems_MV3OddRegular(builtin);
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
 res = initialize_ScaleWordTheorems_ScaleWordTheorems_MV3EvenRegular(builtin);
+if (lean_io_result_is_error(res)) return res;
+lean_dec_ref(res);
+res = initialize_ScaleWordTheorems_ScaleWordTheorems_MV3EvenRegularInterleaving(builtin);
 if (lean_io_result_is_error(res)) return res;
 lean_dec_ref(res);
 res = initialize_ScaleWordTheorems_ScaleWordTheorems_MV3Balance(builtin);

@@ -3630,7 +3630,7 @@ private lemma msToBinary_filter_L_eq_ne_s (l : List StepSize) :
 
 /-- Single-step advancement of nonSBefore: at position m, the prefix non-.s
     count advances by the singleton filter length, modulo D.length. -/
-private lemma nonSBefore_single_step (w : TernaryNecklace n) (m : ℕ) (hm : m < n) :
+lemma nonSBefore_single_step (w : TernaryNecklace n) (m : ℕ) (hm : m < n) :
     let wList := (List.range n).map (fun i => w (↑i : ZMod n))
     let D := orderedDeletion w .s
     ((wList.take ((m + 1) % n)).filter (· ≠ .s)).length % D.length =
@@ -3681,7 +3681,7 @@ private lemma slice_append_singleton (w : TernaryNecklace n) (r k : ℕ) :
 
 /-- General list fact: if `l[k]` passes the filter, then the element at index
     `(l.take k).filter(p).length` in `l.filter p` is `l[k]`. -/
-private lemma getElem_filter_prefix {α : Type*} (l : List α) (p : α → Bool) (k : ℕ)
+lemma getElem_filter_prefix {α : Type*} (l : List α) (p : α → Bool) (k : ℕ)
     (hk : k < l.length) (hpk : p (l[k]) = true)
     (hm : ((l.take k).filter p).length < (l.filter p).length) :
     (l.filter p)[((l.take k).filter p).length] = l[k] := by
@@ -3703,7 +3703,7 @@ private lemma getElem_filter_prefix {α : Type*} (l : List α) (p : α → Bool)
 
 /-- General list fact: if `l[k]` passes the filter, then the prefix count is strictly less
     than the total filtered length. -/
-private lemma length_filter_take_lt {α : Type*} (l : List α) (p : α → Bool) (k : ℕ)
+lemma length_filter_take_lt {α : Type*} (l : List α) (p : α → Bool) (k : ℕ)
     (hk : k < l.length) (hpk : p (l[k]) = true) :
     ((l.take k).filter p).length < (l.filter p).length := by
   induction l generalizing k with
@@ -3723,7 +3723,7 @@ private lemma length_filter_take_lt {α : Type*} (l : List α) (p : α → Bool)
 
 /-- The m-th entry of D (= wList.filter (· ≠ .s)) at position p equals w(↑p),
     when m = #{non-.s entries before position p} and w(↑p) ≠ .s. -/
-private lemma orderedDeletion_getElem
+lemma orderedDeletion_getElem
     (w : TernaryNecklace n) (p : ℕ) (hp : p < n) (hw : w (↑p : ZMod n) ≠ .s) :
     let wList := (List.range n).map (fun i => w (↑i : ZMod n))
     let D := orderedDeletion w .s
@@ -3741,7 +3741,7 @@ private lemma orderedDeletion_getElem
     (decide_eq_true (by rw [hget]; exact hw)) hm
 
 /-- The prefix non-.s count before any non-.s position is strictly less than D.length. -/
-private lemma prefix_filter_lt_D_length
+lemma prefix_filter_lt_D_length
     (w : TernaryNecklace n) (p : ℕ) (hp : p < n) (hw : w (↑p : ZMod n) ≠ .s) :
     let wList := (List.range n).map (fun i => w (↑i : ZMod n))
     ((wList.take p).filter (· ≠ .s)).length < (orderedDeletion w .s).length := by

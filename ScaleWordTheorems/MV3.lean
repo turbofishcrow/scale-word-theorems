@@ -2,5 +2,6 @@ import ScaleWordTheorems.MV3Defs
 import ScaleWordTheorems.MV3AS
 import ScaleWordTheorems.MV3OddRegular
 import ScaleWordTheorems.MV3EvenRegular
+import ScaleWordTheorems.MV3EvenRegularInterleaving
 import ScaleWordTheorems.MV3Balance
 import ScaleWordTheorems.MV3Classification

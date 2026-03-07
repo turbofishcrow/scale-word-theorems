@@ -11,7 +11,7 @@ variable {n : ℕ} [NeZero n]
 /-- A binary MOS with signature (2a, 2c) where gcd(a,c) = 1 has period length a + c = n/2.
     Since gcd(2a, 2c) = 2 > 1, the necklace is a 2-fold repetition. The period length
     can't be n (that would mean gcd(2a,2c) = 1), so it must be n/2. -/
-private lemma binary_mos_period_half (a c : ℕ) (ha_pos : a > 0) (_hc_pos : c > 0)
+lemma binary_mos_period_half (a c : ℕ) (ha_pos : a > 0) (_hc_pos : c > 0)
     (hcop : Nat.Coprime a c) (hn : n = 2 * a + 2 * c)
     (B : BinaryNecklace n) (hB_mos : BinaryNecklace.isMOS B)
     (hB_countL : Necklace.count B .L = 2 * a) (hB_counts : Necklace.count B .s = 2 * c) :
@@ -68,7 +68,7 @@ private lemma binary_mos_period_half (a c : ℕ) (ha_pos : a > 0) (_hc_pos : c >
 
 /-- The period vector of a binary MOS with signature (2a, 2c) and period a+c has
     L-component = a and s-component = c. -/
-private lemma period_vector_of_half_period (a c : ℕ) (ha_pos : a > 0) (_hc_pos : c > 0)
+lemma period_vector_of_half_period (a c : ℕ) (ha_pos : a > 0) (_hc_pos : c > 0)
     (_hcop : Nat.Coprime a c) (hn : n = 2 * a + 2 * c)
     (B : BinaryNecklace n) (_hB_mos : BinaryNecklace.isMOS B)
     (hB_countL : Necklace.count B .L = 2 * a) (hB_counts : Necklace.count B .s = 2 * c)
@@ -996,58 +996,5 @@ theorem evenRegular_isBalanced (w : TernaryNecklace n)
   exact (isS3Invariant_isBalanced σ w).mpr
     (evenRegular_data_isBalanced _ a c ha_pos hc_pos ha_odd hcop hn
       hcountL hcountm hcounts hmos hdel)
-
-
-/-! ## Even-Regular as Interleavings -/
-
-/-- Even-regular scales of length 4 (i.e., `xyxz`) are interleavings of
-    a 2-note MOS.
-
-    **Proof**: The `n = 4` case is trivial (included for completeness).
-    Since `a = 1` and `c = 1`, the template MOS is `2X 2Z` and the scale
-    is determined up to S₃-equivalence and rotation. -/
-theorem evenRegular_four_isInterleaving [NeZero (n / 2)] (w : TernaryNecklace n)
-    (h : isEvenRegular w) (hn : n = 4) :
-    Necklace.isInterleaving w 2 ∧
-    ∃ (φ : ZVector StepSize → StepSize),
-      Necklace.hasMOSProperty (φ ∘ Necklace.strand2 w ⟨0, by omega⟩) := sorry
-
-/-- Doubly-even (`n ≡ 0 mod 4`) even-regular scales with `n > 4` are
-    interleavings of two copies of a smaller even-regular scale.
-
-    **Proof outline** (from interleaving.txt):
-    Let s₁ = stacked 2-steps from 0-degree, s₂ = offset at a generator
-    chosen to have the same interval class as a generator for the
-    lexicographically first mode of `aX 2kZ`. This induces s₁ = s₂ (same
-    period, both primitive). Both s₁ and s₂ are MOS substitution scales
-    with a filling MOS of period 2. Since both `a` and `2k` are even,
-    there are evenly many chunk boundaries, hence evenly many non-slot
-    letters in both → both strands are even-regular. -/
-theorem evenRegular_doubly_even_isInterleaving [NeZero (n / 2)]
-    (w : TernaryNecklace n)
-    (h : isEvenRegular w) (hmod : n % 4 = 0) (hgt : n > 4) :
-    Necklace.isInterleaving w 2 ∧
-    ∃ (φ : ZVector StepSize → StepSize),
-      isEvenRegular (φ ∘ Necklace.strand2 w ⟨0, by omega⟩) := sorry
-
-/-- Singly-even (`n ≡ 2 mod 4`) even-regular scales are contrainterleavings
-    of the two chiralities of an odd-regular scale.
-
-    **Proof outline** (from interleaving.txt):
-    Let s₁ = stacked 2-steps from 0-degree, s₂ = from (n/2)-degree.
-    Since `n/2` is odd, s₁ and s₂ differ only by interchanging `y` and `z`,
-    giving them the same period (both primitive). Both are MOS substitution
-    scales with filling MOS of period 2. Since there are evenly many slot
-    letters in both s₁ and s₂, there are oddly many non-slot letters.
-    Since s₁ and s₂ differ by interchanging `y` and `z`, they have
-    "opposite" filling letters (`x+y` vs `x+z`) → opposite chiralities
-    of an odd-regular MV3 scale. -/
-theorem evenRegular_singly_even_isContrainterleaving [NeZero (n / 2)]
-    (w : TernaryNecklace n)
-    (h : isEvenRegular w) (hmod : n % 4 = 2) :
-    Necklace.isContrainterleaving w ∧
-    ∃ (φ : ZVector StepSize → StepSize),
-      isOddRegular (φ ∘ Necklace.strand2 w ⟨0, by omega⟩) := sorry
-
 
 end TernaryNecklace

@@ -12,6 +12,8 @@
   ["/home/inthar/scale-word-theorems/.lake/build/lib/lean/ScaleWordTheorems/PairIdentificationAndDeletion.olean"],
   "ScaleWordTheorems.MV3OddRegular":
   ["/home/inthar/scale-word-theorems/.lake/build/lib/lean/ScaleWordTheorems/MV3OddRegular.olean"],
+  "ScaleWordTheorems.MV3EvenRegularInterleaving":
+  ["/home/inthar/scale-word-theorems/.lake/build/lib/lean/ScaleWordTheorems/MV3EvenRegularInterleaving.olean"],
   "ScaleWordTheorems.MV3EvenRegular":
   ["/home/inthar/scale-word-theorems/.lake/build/lib/lean/ScaleWordTheorems/MV3EvenRegular.olean"],
   "ScaleWordTheorems.MV3Defs":

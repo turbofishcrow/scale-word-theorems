@@ -4,13 +4,13 @@ Formal proofs in Lean 4 about MOS (Moment of Symmetry) scales and MV3 (Maximum V
 
 The long-term goal is to formalize the **MV3 classification theorem**: a primitive ternary scale with at most 3 distinct `k`-step vectors for every `k` is either balanced, the sporadic word `XYZYX`, or a twisted scale. The MOS theory proved here is a key prerequisite, since balanced MV3 scales decompose into MOS patterns via pair identification and step deletion.
 
-(Inthar's note: Yes, the work so far is AI-generated. I double-checked the major theorems' signatures to ensure that the right things were being proven.)
+(Inthar's note: I did this with Claude Code. I double-checked the major theorems' signatures to ensure that the right things were being proven.)
 
 ## Completed Results
 
 ### MOS Theory (sorry-free)
 
-Three theorems about MOS binary necklaces are fully proven:
+The following theorems about MOS binary necklaces are fully proven:
 
 - **`allMOSScalesAreBalanced`** — Every MOS scale is balanced: for any letter `a` and any step size `k`, the counts of `a` in any two `k`-step subwords differ by at most 1.
 - **`allMOSScalesHaveGenerator`** — Every MOS scale has a generator: a vector `g` such that the prefix vectors at some rotation are exactly the cosets `{j·g + k·p : 0 ≤ j < |p|}`, where `p` is the period vector.
@@ -40,6 +40,16 @@ The generator theorem is proved by strong induction on `n`. The base cases are `
 
 - **`evenRegular_isBalanced`** — Every even-regular scale is balanced.
 - **`evenRegular_chains_offset`** — Structure theorem for even-regular chain data.
+- **`evenRegular_four_isInterleaving`** — The `n = 4` even-regular scale is a 2-interleaving.
+
+### Even-Regular Interleaving (partially complete)
+
+- **`evenRegular_doubly_even_isInterleaving`** — Doubly-even (`n ≡ 0 mod 4`, `n > 4`) even-regular scales are 2-interleavings of a smaller even-regular scale. (1 sorry in strand regularity helper)
+- **`evenRegular_singly_even_isContrainterleaving`** — Singly-even (`n ≡ 2 mod 4`) even-regular scales are 2-contrainterleavings with odd-regular strands. (2 sorry's: contrainterleaving structure + strand regularity)
+- **`mos_letter_palindrome`** — Binary MOS letters satisfy a palindrome relation (sorry-free).
+- **`binary_2step_palindrome_odd_period`** — Binary 2-step vectors are palindromic for odd-period MOS (sorry-free).
+- **`binary_2step_even_odd_rotation`** — Binary 2-step vectors at odd positions are rotations of even positions for even-period MOS (sorry-free).
+- **`ternary_2step_rotation_even_period`** — Ternary 2-step rotation for even-period MOS (sorry-free).
 
 ### Partially Complete Results
 
@@ -112,7 +122,16 @@ Classification of balanced ternary scales (sorry-free):
 
 ### [MV3EvenRegular.lean](ScaleWordTheorems/MV3EvenRegular.lean) (1053 lines)
 
-Even-regular theory: `evenRegular_isBalanced`, `evenRegular_chains_offset`. Interleaving theorems stated but not yet proved.
+Even-regular theory: `evenRegular_isBalanced`, `evenRegular_chains_offset`, `binary_mos_period_half`, `period_vector_of_half_period`.
+
+### [MV3EvenRegularInterleaving.lean](ScaleWordTheorems/MV3EvenRegularInterleaving.lean) (1803 lines)
+
+Interleaving and contrainterleaving theory for even-regular scales:
+- **Palindrome infrastructure**: `mos_letter_palindrome` (binary MOS palindrome), `binary_2step_palindrome_odd_period`, `binary_2step_even_odd_rotation`, `ternary_2step_rotation_even_period`
+- **Interleaving**: `evenRegular_four_isInterleaving`, `evenRegular_doubly_even_isInterleaving`
+- **Contrainterleaving**: `evenRegular_singly_even_isContrainterleaving`
+- **Transfer lemmas**: `isInterleaving_of_applyPerm`, `isContrainterleaving_of_applyPerm`
+- 3 sorry's remaining in strand regularity and contrainterleaving structure helpers
 
 ### [MV3Classification.lean](ScaleWordTheorems/MV3Classification.lean) (1210 lines)
 
@@ -137,7 +156,8 @@ Twisted necklace constructions and basic properties.
 | MV3AS.lean | 1 | Near-complete |
 | MV3OddRegular.lean | 0 | Complete |
 | MV3Balance.lean | 0 | Complete |
-| MV3EvenRegular.lean | 3 | In progress |
+| MV3EvenRegular.lean | 0 | Complete |
+| MV3EvenRegularInterleaving.lean | 3 | In progress |
 | MV3Classification.lean | 12 | In progress |
 | **Total** | **17** | |
 
